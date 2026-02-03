@@ -32,10 +32,9 @@
 <script setup>
 import G6 from "@antv/g6"
 
-import { onMounted, onBeforeUpdate, provide } from 'vue'
+import { onMounted } from 'vue'
 import { watch, inject, ref } from 'vue'
 import { graph_config } from "./graphs/graph_config.js"
-// import { get_roofline_options } from "./graphs/roofline_config.js"
 import axios from 'axios'
 import { strNumber, strNumberTime } from '@/utils.js';
 import { Chart, registerables } from 'chart.js';
@@ -84,8 +83,14 @@ function graphUpdate() {
     const url = 'http://' + ip_port.value + '/get_graph'
     console.log("graphUpdate", url)
     info_window_str.value="Loading from server..."
-    var is_init=false
-    axios.post(url, { model_id: model_id.value, hardware: hardware.value, inference_config: global_inference_config.value }).then(function (response) {
+    axios.post(
+        url,
+        {
+            model_id: model_id.value,
+            hardware: hardware.value,
+            inference_config: global_inference_config.value
+        }
+    ).then(function (response) {
         console.log(response);
         info_window_str.value=""
         graph_data = response.data
@@ -97,7 +102,8 @@ function graphUpdate() {
 
         const old_ids = new Set(graph.getNodes().map(node => node.get('id')));
         const new_ids = new Set(graph_data.nodes.map(node => node.id));
-        const is_equal=old_ids.size === new_ids.size && [...old_ids].every(key => new_ids.has(key));
+        const is_equal =
+            old_ids.size === new_ids.size && [...old_ids].every(key => new_ids.has(key));
 
         if (is_equal) {
             // iterate each node
@@ -122,13 +128,11 @@ function graphUpdate() {
             graph.fitView();
         }, 10);
 
-    })
-        .catch(function (error) {
-            info_window_str.value="Error in get_graph"
-            console.log("error in graphUpdate");
-            console.log(error);
-        });
-
+    }).catch(function (error) {
+        info_window_str.value="Error in get_graph"
+        console.log("error in graphUpdate");
+        console.log(error);
+    });
 }
 
 watch(() => global_update_trigger.value, () => graphUpdate(false))

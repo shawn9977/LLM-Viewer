@@ -1,6 +1,6 @@
 <template>
     <div class="title">
-        <a href="https://github.com/hahnyuan/LLM-Viewer" target="_blank" class="hover-bold">LLM-Viewer</a>
+        <a href="https://github.com/wayfeng/LLM-Viewer" target="_blank" class="hover-bold">LLM-Viewer</a>
         v{{ version }}
     </div>
     <div class="header_button">
@@ -20,7 +20,8 @@
         <span>Server: </span>
         <select v-model="ip_port">
             <option value="172.16.112.46:5000">172.16.112.46</option>
-            <option value="llm_viewer_backend:5000">llm_viewer_backend</option>
+            <option value="172.16.112.118:5000">172.16.112.118</option>
+            <option value="127.0.0.1:5000">localhost</option>
         </select>
     </div>
     <div>
@@ -97,14 +98,14 @@ onMounted(() => {
     update_available()
 })
 
-var select_model_id = ref('Qwen/Qwen3-4B-Instruct-2507');
+var select_model_id = ref(model_id.value);
 watch(select_model_id, (n) => {
     console.log("select_model_id", n)
     model_id.value = n
     global_update_trigger.value += 1
 })
 
-var select_hardware = ref('intel_arc_b60');
+var select_hardware = ref(hardware.value);
 watch(select_hardware, (n) => {
     console.log("select_hardware", n)
     hardware.value = n

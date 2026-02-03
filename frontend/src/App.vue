@@ -5,13 +5,12 @@ import LeftPannel from "./components/LeftPannel.vue"
 import Header from "./components/Header.vue"
 
 import { ref, computed, provide } from 'vue';
-import { IP_PORT, MODEL_ID, HARDWARE } from "./config.js";
 
-const model_id = ref(MODEL_ID);
-const hardware = ref(HARDWARE);
+const model_id = ref(import.meta.env.VITE_MODEL_ID);
+const hardware = ref(import.meta.env.VITE_HARDWARE);
 const global_update_trigger = ref(1);
 const total_results = ref({});
-const ip_port = ref(IP_PORT);
+const ip_port = ref(import.meta.env.VITE_IP_PORT);
 
 provide("model_id", model_id);
 provide("hardware", hardware);
@@ -21,14 +20,14 @@ provide("ip_port", ip_port);
 
 
 const global_inference_config = ref({ 
-  "stage": "decode", 
-  batch_size: 1, 
-  seq_length: 1024, 
+  "stage": "decode",
+  batch_size: 1,
+  seq_length: 1024,
   gen_length: 1,
   tp_size: 1,
-  w_quant: "INT8", 
-  a_quant: "INT8", 
-  kv_quant: "INT8", 
+  w_quant: "8-bit",
+  a_quant: "8-bit",
+  kv_quant: "8-bit",
   use_flashattention: false
 });
 provide("global_inference_config", global_inference_config);

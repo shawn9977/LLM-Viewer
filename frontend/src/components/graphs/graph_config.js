@@ -67,22 +67,6 @@ G6.registerNode(
         name: 'title',
       });
 
-      // if (cfg.nodeLevel > 0) {
-      //   group.addShape('marker', {
-      //     attrs: {
-      //       x: 184,
-      //       y: 30,
-      //       r: 6,
-      //       cursor: 'pointer',
-      //       symbol: cfg.collapse ? G6.Marker.expand : G6.Marker.collapse,
-      //       stroke: '#666',
-      //       lineWidth: 1,
-      //     },
-      //     // must be assigned in G6 3.3 and later versions. it can be any string you want, but should be unique in a custom item type
-      //     name: 'collapse-icon',
-      //   });
-      // }
-
       // The content list
       cfg.panels.forEach((item, index) => {
         // name text
@@ -152,10 +136,6 @@ export const graph_config = {
             [0.5, 0],
             [0.5, 1]
         ],
-      //   anchorPoints: [
-      //     [0, 0.5],
-      //     [1, 0.5],
-      // ],
         logoIcon: {
           show: false,
         },
@@ -189,7 +169,6 @@ export const graph_config = {
     // fitView: true,
     // plugins: [minimap], // 将 minimap 实例配置到图上
     modes: {
-        // default: ['drag-canvas', 'zoom-canvas', 'drag-node', 'lasso-select'], // 允许拖拽画布、放缩画布、拖拽节点
         default: ['drag-canvas', 'zoom-canvas',  'lasso-select'], // 允许拖拽画布、放缩画布、拖拽节点
     },
     layout: {

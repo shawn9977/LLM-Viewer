@@ -85,9 +85,9 @@
     <div>
         <h3>{{ inference_stage }}</h3>
         <div v-for="(value, key) in total_results[inference_stage]" :key="key" class="network-wise-info-item">
-            <span v-if="['bound'].includes(key)">{{ key }}: {{ value }}</span>
-            <span color="green" v-else-if="['inference_time'].includes(key)">{{ key }}: {{ strNumberTime(value) }}</span>
-            <span v-else-if="['OPs'].includes(key)">{{ key }}: {{ strNumber(value, 'OPs') }}</span>
+            <span v-if="['bound'].includes(key)" class="highlight-span">{{ key }}: {{ value }}</span>
+            <span v-else-if="['inference_time'].includes(key)" class="highlight-time">{{ key }}: {{ strNumberTime(value) }}</span>
+            <span v-else-if="['OPs'].includes(key)" class="highlight-ops">{{ key }}: {{ strNumber(value, 'OPs') }}</span>
             <span v-else>{{ key }}: {{ strNumber(value, 'B') }}</span>
         </div>
         <p>NOTE: The time estimated by the roofline model represents the theoretical performance that the hardware can achieve. 
@@ -111,9 +111,9 @@ const batch_size = ref(1);
 const seq_length = ref(1024);
 const gen_length = ref(1);
 const tp_size = ref(1);
-const w_quant = ref('FP16');
-const a_quant = ref('FP16');
-const kv_quant = ref('FP16');
+const w_quant = ref('8-bit');
+const a_quant = ref('8-bit');
+const kv_quant = ref('8-bit');
 const use_flashattention = ref(false);
 
 watch(inference_stage, (new_stage) => {
@@ -182,9 +182,24 @@ watch(gen_length, (n) => {
     color: #0000ff;
     cursor: pointer;
 }
+
 .network-wise-info-item {
     padding: 3px;
     border-top: 1px solid #e2e2e2;
+}
+
+.highlight-span {
+    color: #d7263d;
+    font-weight: bold;
+    background: #fffbe6;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.highlight-time {
+    color: #1e88e5;
+}
+.highlight-ops {
+    color: #43a047;
 }
 
 </style>
