@@ -23,6 +23,10 @@ const global_inference_config = ref({
   "stage": "decode",
   batch_size: 1,
   seq_length: 1024,
+  image_size: {
+    width: 1024,
+    height: 1024
+  },
   gen_length: 1,
   tp_size: 1,
   w_quant: "8-bit",

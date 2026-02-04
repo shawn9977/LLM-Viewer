@@ -10,6 +10,7 @@ available_model_ids_sources = {
     "Qwen/Qwen3-4B-Instruct-2507": {"source": "huggingface"},
     "Qwen/Qwen3-32B": {"source": "huggingface"},
     "Qwen/Qwen3-30B-A3B-Instruct-2507": {"source": "huggingface"},
+    "Qwen/Qwen3-VL-8B-Instruct": {"source": "huggingface"},
     "LLM-Research/llama-2-7b": {"source": "modelscope"},
     "LLM-Research/llama-2-13b": {"source": "modelscope"},
     "zai-org/chatglm3-6b": {"source": "huggingface"},
@@ -18,9 +19,19 @@ available_model_ids_sources = {
 def get_available_models():
     return list(available_model_ids_sources.keys())
 
-def get_model_config_path(model_id: str):
-    model_name = model_id.split("/")[-1].lower().replace('.', '_')
-    return f"./models/{model_name}/config.json"
+# def get_model_config_path(model_id: str):
+#     model_name = model_id.split("/")[-1].lower().replace('.', '_')
+#     return f"./models/{model_name}/config.json"
+
+
+def get_model_config_path(model_id: str) -> str:
+    config_path = Path(f"./{model_id}/config.json")
+
+    if not config_path.is_file():
+        raise FileNotFoundError(f"Config not found: {config_path} (model_id={model_id})")
+
+    return str(config_path)
+
 
 def download_model_config(model_id: str, source: str = "huggingface"):
     #model_id = "Qwen/Qwen2.5-7B"

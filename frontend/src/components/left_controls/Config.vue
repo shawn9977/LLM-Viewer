@@ -8,17 +8,23 @@
         <label for="prefill">Prefill</label>
         <input type="radio" v-model="inference_stage" id="chat" value="chat">
         <label for="prefill">Chat</label>
+        <input type="radio" v-model="inference_stage" id="vision" value="vision">
+        <label for="vision">Vision</label>
     </div>
     <div class="config_div">
         Batchsize:
         <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size">
         <input type="number" v-model.lazy="batch_size" min="1" max="256">
     </div>
-    <!-- <div class="config_div" v-if="inference_stage!=chat"> -->
-    <div class="config_div" v-if="inference_stage!='chat'">
+    <div class="config_div" v-if="inference_stage=='vision'">
+        Image Size:
+        <input type="number" v-model.lazy="image_width" min="1" max="8192">
+        <span> x </span>
+        <input type="number" v-model.lazy="image_height" min="1" max="8192">
+    </div>
+    <div class="config_div" v-else-if="inference_stage!='chat'">
         SeqLength:
         <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
-        <!-- <span id="seq_length">1024</span> -->
         <input type="number" v-model.lazy="seq_length" min="1" max="4096">
     </div>
     <div class="config_div" v-else>
@@ -109,6 +115,8 @@ const total_results = inject('total_results');
 const inference_stage = ref('decode');
 const batch_size = ref(1);
 const seq_length = ref(1024);
+const image_width = ref(1024);
+const image_height = ref(1024);
 const gen_length = ref(1);
 const tp_size = ref(1);
 const w_quant = ref('8-bit');
@@ -131,6 +139,22 @@ watch(batch_size, (n) => {
 watch(seq_length, (n) => {
     console.log("seq_length", n)
     global_inference_config.value.seq_length = n
+    global_update_trigger.value += 1
+})
+
+watch(image_width, (n) => {
+    global_inference_config.value.image_size = {
+        width: n,
+        height: image_height.value
+    }
+    global_update_trigger.value += 1
+})
+
+watch(image_height, (n) => {
+    global_inference_config.value.image_size = {
+        width: image_width.value,
+        height: n
+    }
     global_update_trigger.value += 1
 })
 

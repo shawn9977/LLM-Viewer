@@ -45,7 +45,7 @@ class ModelAnalyzer:
         self.batchsize = None
         self.seqlen = None
 
-    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1):
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None):
         """
         seqlen: sequence length
         batchsize: batch size
@@ -196,7 +196,7 @@ class ModelAnalyzer:
 class LLMAnalyzer(ModelAnalyzer):
     def __init__(self, model_id, hardware, model_params=None):
         super().__init__(model_id, hardware, model_params=model_params)
-    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1):
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None):
         assert seqlen > 0
         assert batchsize > 0
         self.results = {"decode": {}, "prefill": {}}
@@ -494,7 +494,7 @@ class MoEAnalyzer(ModelAnalyzer):
     def __init__(self, model_id, hardware, model_params=None):
         super().__init__(model_id, hardware, model_params=model_params)
 
-    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size = 1):
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size = 1, image_size=None):
         assert seqlen > 0
         assert batchsize > 0
         self.results = {"decode": {}, "prefill": {}}
@@ -815,6 +815,451 @@ class MoEAnalyzer(ModelAnalyzer):
 class VLMAnalyzer(ModelAnalyzer):
     def __init__(self, model_id, hardware, model_params=None):
         super().__init__(model_id, hardware, model_params=model_params)
+
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None):
+        assert seqlen > 0
+        assert batchsize > 0
+        self.results = {"decode": {}, "prefill": {}, "vision": {}}
+        if kv_bit is None:
+            kv_bit = a_bit
+        self.w_bit = w_bit
+        self.a_bit = a_bit
+        self.kv_bit = kv_bit
+        self.batchsize = batchsize
+        self.seqlen = seqlen
+        self.tp_size = tp_size
+
+        w_byte = self.w_bit / 8
+        a_byte = self.a_bit / 8
+        kv_byte = self.kv_bit / 8
+
+        model_params = self.model_params
+
+        # ===== Text branch (same as LLM) =====
+        num_attention_heads = self.module.get_num_attention_heads(model_params)
+        hidden_size = self.module.get_hidden_size(model_params)
+        num_key_value_heads = self.module.get_num_key_value_heads(model_params)
+        num_hidden_layers = self.module.get_num_hidden_layers(model_params)
+
+        for name, (ic, oc) in self.module.get_linear_layers(model_params, tp_size).items():
+            is_kv_proj = name in ["k_proj", "v_proj"]
+            is_normal_proj = not is_kv_proj
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=ic * oc * batchsize * 2,
+                load_weight=ic * oc * w_byte,
+                load_act=ic * batchsize * a_byte,
+                store_act=0 if is_kv_proj else oc * batchsize * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=(0 if is_normal_proj else oc * batchsize * kv_byte),
+            )
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=ic * oc * batchsize * seqlen * 2,
+                load_weight=ic * oc * w_byte,
+                load_act=ic * batchsize * seqlen * a_byte,
+                store_act=(0 if is_kv_proj else oc * batchsize * seqlen * a_byte),
+                load_kv_cache=0,
+                store_kv_cache=(0 if is_normal_proj else oc * batchsize * seqlen * kv_byte),
+            )
+
+        head_size = hidden_size // num_attention_heads
+        qk_matmul_OPs = seqlen * head_size * num_attention_heads * batchsize * 2
+        sv_matmul_OPs = 1 * head_size * seqlen * num_attention_heads * batchsize * 2
+        softmax_OPs = batchsize * num_attention_heads * seqlen * 1 * 5
+        if use_flashattention:
+            name = "fused_attention"
+            bandwidth, max_OPS, onchip_buffer = get_hardware_info(self.hardware, self.w_bit, self.a_bit, self.kv_bit)
+            block_size_r = min(math.ceil(onchip_buffer / (kv_byte * head_size)), head_size)
+            n_blocks_r = math.ceil(1 / block_size_r)
+            q_numel = 1 * head_size * batchsize * num_attention_heads * a_byte
+            o_numel = 1 * seqlen * batchsize * num_attention_heads * a_byte
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
+                load_weight=0,
+                load_act=q_numel,
+                store_act=o_numel * 2,
+                load_kv_cache=n_blocks_r * seqlen * head_size * batchsize * num_key_value_heads * kv_byte * 2,
+                store_kv_cache=0,
+            )
+        else:
+            self._analyze_to_results(
+                "decode",
+                "qk_matmul",
+                OPs=qk_matmul_OPs,
+                load_weight=0,
+                load_act=1 * head_size * batchsize * num_attention_heads * a_byte,
+                store_act=1 * seqlen * batchsize * num_attention_heads * a_byte,
+                load_kv_cache=seqlen * head_size * batchsize * num_key_value_heads * kv_byte,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "decode",
+                "sv_matmul",
+                OPs=sv_matmul_OPs,
+                load_weight=0,
+                load_act=1 * seqlen * batchsize * num_attention_heads * a_byte,
+                store_act=1 * head_size * batchsize * num_attention_heads * a_byte,
+                load_kv_cache=seqlen * head_size * batchsize * num_key_value_heads * kv_byte,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "decode",
+                "softmax",
+                OPs=softmax_OPs,
+                load_weight=0,
+                load_act=batchsize * num_attention_heads * seqlen * a_byte,
+                store_act=batchsize * num_attention_heads * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        for name in self.module.get_norm_layers(model_params):
+            norm_OPs = batchsize * hidden_size * 1 * (4 if "rmsnorm" in name else 7)
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=norm_OPs,
+                load_weight=0,
+                load_act=batchsize * hidden_size * a_byte,
+                store_act=batchsize * hidden_size * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        for name in ["attn_add", "mlp_add"]:
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=batchsize * hidden_size,
+                load_weight=0,
+                load_act=batchsize * hidden_size * a_byte,
+                store_act=batchsize * hidden_size * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+        for name in ["mlp_act"]:
+            self._analyze_to_results(
+                "decode",
+                name,
+                OPs=batchsize * hidden_size * 5,
+                load_weight=0,
+                load_act=batchsize * hidden_size * a_byte,
+                store_act=batchsize * hidden_size * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        qk_matmul_OPs = seqlen * seqlen * head_size * num_attention_heads * batchsize * 2
+        sv_matmul_OPs = seqlen * head_size * seqlen * num_attention_heads * batchsize * 2
+        softmax_OPs = batchsize * num_attention_heads * seqlen * seqlen * 5
+        if use_flashattention:
+            name = "fused_attention"
+            bandwidth, max_OPS, onchip_buffer = get_hardware_info(self.hardware, self.w_bit, self.a_bit, self.kv_bit)
+            block_size_r = min(math.ceil(onchip_buffer / (kv_byte * head_size)), head_size)
+            n_blocks_r = math.ceil(seqlen / block_size_r)
+            q_numel = seqlen * head_size * batchsize * num_attention_heads * a_byte
+            o_numel = seqlen * seqlen * batchsize * num_attention_heads * a_byte
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
+                load_weight=0,
+                load_act=q_numel,
+                store_act=o_numel * 2,
+                load_kv_cache=n_blocks_r * seqlen * head_size * batchsize * num_key_value_heads * kv_byte * 2,
+                store_kv_cache=0,
+            )
+        else:
+            self._analyze_to_results(
+                "prefill",
+                "qk_matmul",
+                OPs=qk_matmul_OPs,
+                load_weight=0,
+                load_act=seqlen * head_size * batchsize * num_key_value_heads * a_byte,
+                store_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
+                load_kv_cache=seqlen * head_size * batchsize * num_key_value_heads * kv_byte,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "prefill",
+                "sv_matmul",
+                OPs=sv_matmul_OPs,
+                load_weight=0,
+                load_act=seqlen * seqlen * batchsize * num_attention_heads * a_byte,
+                store_act=seqlen * head_size * batchsize * num_attention_heads * a_byte,
+                load_kv_cache=seqlen * head_size * batchsize * num_key_value_heads * kv_byte,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "prefill",
+                "softmax",
+                OPs=softmax_OPs,
+                load_weight=0,
+                load_act=batchsize * num_attention_heads * seqlen * seqlen * a_byte,
+                store_act=batchsize * num_attention_heads * seqlen * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        for name in self.module.get_norm_layers(model_params):
+            norm_OPs = batchsize * hidden_size * seqlen * (4 if "rmsnorm" in name else 7)
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=norm_OPs,
+                load_weight=0,
+                load_act=batchsize * hidden_size * seqlen * a_byte,
+                store_act=batchsize * hidden_size * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+        for name in ["attn_add", "mlp_add"]:
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=batchsize * hidden_size * seqlen,
+                load_weight=0,
+                load_act=batchsize * hidden_size * seqlen * a_byte,
+                store_act=batchsize * hidden_size * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+        for name in ["mlp_act"]:
+            self._analyze_to_results(
+                "prefill",
+                name,
+                OPs=batchsize * hidden_size * seqlen * 5,
+                load_weight=0,
+                load_act=batchsize * hidden_size * seqlen * a_byte,
+                store_act=batchsize * hidden_size * seqlen * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        total_results = {"decode": {}, "prefill": {}, "vision": {}}
+        for data_name in ALL_DATA_NAMES:
+            total_results["decode"][data_name] = 0
+            total_results["prefill"][data_name] = 0
+            total_results["vision"][data_name] = 0
+        for stage in ["decode", "prefill"]:
+            for _, result in self.results[stage].items():
+                for data_name in ALL_DATA_NAMES:
+                    total_results[stage][data_name] += result[data_name] * num_hidden_layers
+
+        weight_kv_footprint = total_results["prefill"]["load_weight"] + total_results["prefill"]["store_kv_cache"]
+        decode_tmp_act = sum(result["store_act"] for result in self.results["decode"].values())
+        total_results["decode"]["memory_consumption"] = decode_tmp_act + weight_kv_footprint
+        total_results["decode"]["memory_consumption_tmp_act"] = decode_tmp_act
+        total_results["decode"]["memory_consumption_weight"] = total_results["prefill"]["load_weight"]
+        total_results["decode"]["memory_consumption_kv_cache"] = total_results["prefill"]["store_kv_cache"]
+        prefill_tmp_act = sum(result["store_act"] for result in self.results["prefill"].values())
+        total_results["prefill"]["memory_consumption"] = prefill_tmp_act + weight_kv_footprint
+        total_results["prefill"]["memory_consumption_tmp_act"] = prefill_tmp_act
+        total_results["prefill"]["memory_consumption_weight"] = total_results["prefill"]["load_weight"]
+        total_results["prefill"]["memory_consumption_kv_cache"] = total_results["prefill"]["store_kv_cache"]
+
+        args = {"batchsize": batchsize, "seqlen": seqlen, "a_byte": a_byte, "w_byte": w_byte}
+        for layer_info in self.module.post_process(self.model_params, args):
+            self._analyze_to_results(**layer_info)
+            for data_name in ALL_DATA_NAMES:
+                total_results[layer_info["stage"]][data_name] += self.results[layer_info["stage"]][layer_info["name"]][
+                    data_name
+                ]
+
+        # ===== Vision branch =====
+        def _parse_image_size(size):
+            if isinstance(size, dict):
+                width = size.get("width") or size.get("w")
+                height = size.get("height") or size.get("h")
+                if width and height:
+                    return int(width), int(height)
+            if isinstance(size, (list, tuple)) and len(size) == 2:
+                return int(size[0]), int(size[1])
+            if isinstance(size, str) and "x" in size:
+                parts = size.lower().split("x")
+                if len(parts) == 2:
+                    return int(parts[0]), int(parts[1])
+            return 1024, 1024
+
+        image_w, image_h = _parse_image_size(image_size)
+        patch_size = self.module.get_vision_patch_size(model_params)
+        spatial_merge_size = self.module.get_vision_spatial_merge_size(model_params)
+        in_channels = self.module.get_vision_in_channels(model_params)
+        vision_hidden_size = self.module.get_vision_hidden_size(model_params)
+        vision_num_heads = self.module.get_vision_num_heads(model_params)
+        vision_intermediate_size = self.module.get_vision_intermediate_size(model_params)
+        vision_num_layers = self.module.get_vision_num_hidden_layers(model_params)
+
+        num_patches_w = max(1, math.ceil(image_w / patch_size))
+        num_patches_h = max(1, math.ceil(image_h / patch_size))
+        num_patches = num_patches_w * num_patches_h
+        merged_tokens = max(1, math.ceil(num_patches / max(1, spatial_merge_size) ** 2))
+
+        patch_ic = in_channels * patch_size * patch_size
+        patch_oc = vision_hidden_size
+        self._analyze_to_results(
+            "vision",
+            "vision_patch_embed",
+            OPs=patch_ic * patch_oc * batchsize * num_patches * 2,
+            load_weight=patch_ic * patch_oc * w_byte,
+            load_act=patch_ic * batchsize * num_patches * a_byte,
+            store_act=patch_oc * batchsize * num_patches * a_byte,
+            load_kv_cache=0,
+            store_kv_cache=0,
+        )
+
+        for name, (ic, oc) in self.module.get_vision_linear_layers(model_params, tp_size).items():
+            self._analyze_to_results(
+                "vision",
+                name,
+                OPs=ic * oc * batchsize * merged_tokens * 2,
+                load_weight=ic * oc * w_byte,
+                load_act=ic * batchsize * merged_tokens * a_byte,
+                store_act=oc * batchsize * merged_tokens * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        vision_head_size = vision_hidden_size // vision_num_heads
+        v_qk_OPs = merged_tokens * merged_tokens * vision_head_size * vision_num_heads * batchsize * 2
+        v_sv_OPs = merged_tokens * vision_head_size * merged_tokens * vision_num_heads * batchsize * 2
+        v_softmax_OPs = batchsize * vision_num_heads * merged_tokens * merged_tokens * 5
+
+        if use_flashattention:
+            name = "vision_fused_attention"
+            bandwidth, max_OPS, onchip_buffer = get_hardware_info(self.hardware, self.w_bit, self.a_bit, self.kv_bit)
+            block_size_r = min(math.ceil(onchip_buffer / (a_byte * vision_head_size)), vision_head_size)
+            n_blocks_r = math.ceil(merged_tokens / block_size_r)
+            q_numel = merged_tokens * vision_head_size * batchsize * vision_num_heads * a_byte
+            kv_numel = merged_tokens * vision_head_size * batchsize * vision_num_heads * a_byte * 2
+            o_numel = merged_tokens * merged_tokens * batchsize * vision_num_heads * a_byte
+            self._analyze_to_results(
+                "vision",
+                name,
+                OPs=v_qk_OPs + v_sv_OPs + v_softmax_OPs,
+                load_weight=0,
+                load_act=q_numel + kv_numel,
+                store_act=o_numel * 2,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+        else:
+            self._analyze_to_results(
+                "vision",
+                "vision_qk_matmul",
+                OPs=v_qk_OPs,
+                load_weight=0,
+                load_act=merged_tokens * vision_head_size * batchsize * vision_num_heads * a_byte,
+                store_act=merged_tokens * merged_tokens * batchsize * vision_num_heads * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "vision",
+                "vision_sv_matmul",
+                OPs=v_sv_OPs,
+                load_weight=0,
+                load_act=merged_tokens * merged_tokens * batchsize * vision_num_heads * a_byte,
+                store_act=merged_tokens * vision_head_size * batchsize * vision_num_heads * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "vision",
+                "vision_softmax",
+                OPs=v_softmax_OPs,
+                load_weight=0,
+                load_act=batchsize * vision_num_heads * merged_tokens * merged_tokens * a_byte,
+                store_act=batchsize * vision_num_heads * merged_tokens * merged_tokens * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        for name in self.module.get_vision_norm_layers(model_params):
+            norm_OPs = batchsize * vision_hidden_size * merged_tokens * 7
+            self._analyze_to_results(
+                "vision",
+                name,
+                OPs=norm_OPs,
+                load_weight=0,
+                load_act=batchsize * vision_hidden_size * merged_tokens * a_byte,
+                store_act=batchsize * vision_hidden_size * merged_tokens * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        for name in ["vision_attn_add", "vision_mlp_add"]:
+            self._analyze_to_results(
+                "vision",
+                name,
+                OPs=batchsize * vision_hidden_size * merged_tokens,
+                load_weight=0,
+                load_act=batchsize * vision_hidden_size * merged_tokens * a_byte,
+                store_act=batchsize * vision_hidden_size * merged_tokens * a_byte,
+                load_kv_cache=0,
+                store_kv_cache=0,
+            )
+
+        self._analyze_to_results(
+            "vision",
+            "vision_mlp_act",
+            OPs=batchsize * vision_hidden_size * merged_tokens * 5,
+            load_weight=0,
+            load_act=batchsize * vision_hidden_size * merged_tokens * a_byte,
+            store_act=batchsize * vision_hidden_size * merged_tokens * a_byte,
+            load_kv_cache=0,
+            store_kv_cache=0,
+        )
+
+        vision_repeat_layers = {
+            "vision_q_proj",
+            "vision_k_proj",
+            "vision_v_proj",
+            "vision_out_proj",
+            "vision_gate_proj",
+            "vision_up_proj",
+            "vision_down_proj",
+            "vision_qk_matmul",
+            "vision_sv_matmul",
+            "vision_softmax",
+            "vision_norm1",
+            "vision_norm2",
+            "vision_attn_add",
+            "vision_mlp_add",
+            "vision_mlp_act",
+            "vision_fused_attention",
+        }
+
+        for name, result in self.results["vision"].items():
+            multiplier = vision_num_layers if name in vision_repeat_layers else 1
+            for data_name in ALL_DATA_NAMES:
+                total_results["vision"][data_name] += result[data_name] * multiplier
+
+        vision_args = {"batchsize": batchsize, "seqlen": merged_tokens, "a_byte": a_byte, "w_byte": w_byte}
+        for layer_info in self.module.vision_post_process(self.model_params, vision_args):
+            self._analyze_to_results(**layer_info)
+            for data_name in ALL_DATA_NAMES:
+                total_results[layer_info["stage"]][data_name] += self.results[layer_info["stage"]][layer_info["name"]][
+                    data_name
+                ]
+
+        vision_tmp_act = 0
+        for name, result in self.results["vision"].items():
+            multiplier = vision_num_layers if name in vision_repeat_layers else 1
+            vision_tmp_act += result["store_act"] * multiplier
+        vision_weight = total_results["vision"]["load_weight"]
+        total_results["vision"]["memory_consumption"] = vision_tmp_act + vision_weight
+        total_results["vision"]["memory_consumption_tmp_act"] = vision_tmp_act
+        total_results["vision"]["memory_consumption_weight"] = vision_weight
+        total_results["vision"]["memory_consumption_kv_cache"] = 0
+
+        self.results["total_results"] = total_results
+        return self.results
 
 class YOLOAnalyzer(ModelAnalyzer):
     def __init__(self, model_id, hardware, model_params=None):

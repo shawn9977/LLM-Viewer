@@ -29,6 +29,10 @@ def get_model_graph(model_id, hardware, inference_config):
     use_flashattention = bool(inference_config["use_flashattention"])
     gen_length = int(inference_config["gen_length"])
     tp_size = int(inference_config["tp_size"])
+    image_size = inference_config.get("image_size")
+
+    stage = inference_config["stage"]
+    input_node_id = "vision_input" if stage == "vision" else "input"
 
     analyzer = get_analyzer(model_id, hardware)
     result = analyzer.analyze(
@@ -38,7 +42,8 @@ def get_model_graph(model_id, hardware, inference_config):
         a_bit=a_bit,
         kv_bit=kv_bit,
         use_flashattention=use_flashattention,
-        tp_size=tp_size
+        tp_size=tp_size,
+        image_size=image_size
     )
     bandwidth, max_OPS, onchip_buffer = get_hardware_info(hardware, w_bit, a_bit, kv_bit)
     GQA = analyzer.if_group_qa()
@@ -50,8 +55,8 @@ def get_model_graph(model_id, hardware, inference_config):
 
     nodes = [
         {
-            "label": "input",
-            "id": "input",
+            "label": input_node_id,
+            "id": input_node_id,
         }
     ]
     edges = []
@@ -70,11 +75,15 @@ def get_model_graph(model_id, hardware, inference_config):
             edge = {"source": input_name, "target": name}
             edges.append(edge)
 
-    if use_flashattention:
+    if stage == "vision":
+        if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
+            layer_graph = analyzer.module.vision_flashattention_layer_graph
+        else:
+            layer_graph = analyzer.module.vision_layer_graph
+    elif use_flashattention:
         layer_graph = analyzer.module.flashattention_transformer_layer_graph
     else:
         layer_graph = analyzer.module.transformer_layer_graph
-    stage = inference_config["stage"]
     total_results = result["total_results"]
     if stage != "chat":
         result = result[stage]
