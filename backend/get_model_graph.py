@@ -32,7 +32,16 @@ def get_model_graph(model_id, hardware, inference_config):
     image_size = inference_config.get("image_size")
 
     stage = inference_config["stage"]
+    if stage == "vision":
+        stage = "prefill"
     input_node_id = "vision_input" if stage == "vision" else "input"
+    graph_stage = stage
+    if stage == "multimodal_ttft":
+        graph_stage = "prefill"
+        input_node_id = "input"
+    elif stage == "multimodal_tpot":
+        graph_stage = "decode"
+        input_node_id = "input"
 
     analyzer = get_analyzer(model_id, hardware)
     result = analyzer.analyze(
@@ -61,10 +70,10 @@ def get_model_graph(model_id, hardware, inference_config):
     ]
     edges = []
 
-    def write_to_node(name, OPs, memory_access, info, input_names=[]):
+    def write_to_node(name, OPs, memory_access, info, input_names=[], node_id=None, label=None):
         node = {
-            "label": name,
-            "id": name,
+            "label": label or name,
+            "id": node_id or name,
             "description": f"OPs:{str_number(OPs)}, Access:{str_number(memory_access, 'B')}",
             "info": info,
         }
@@ -72,9 +81,77 @@ def get_model_graph(model_id, hardware, inference_config):
             node["label"] += "(GQA)"
         nodes.append(node)
         for input_name in input_names:
-            edge = {"source": input_name, "target": name}
+            edge = {"source": input_name, "target": node["id"]}
             edges.append(edge)
 
+    def add_layer_graph(layer_graph, result_stage, prefix, label_prefix, root_id=None, root_label=None, root_target=None):
+        if root_id and root_label:
+            nodes.append({"label": root_label, "id": root_id})
+        if root_id and root_target:
+            edges.append({"source": root_id, "target": f"{prefix}{root_target}"})
+        for name, input_names in layer_graph.items():
+            node_id = f"{prefix}{name}"
+            node_label = f"{label_prefix}{name}"
+            if name in ["input", "output", "vision_input", "vision_output"] or name not in result_stage:
+                OPs = 0
+                memory_access = 0
+                info = {}
+            else:
+                OPs = result_stage[name]["OPs"]
+                memory_access = result_stage[name]["memory_access"]
+                info = result_stage[name]
+            write_to_node(
+                name,
+                OPs,
+                memory_access,
+                info,
+                [f"{prefix}{n}" for n in input_names],
+                node_id=node_id,
+                label=node_label,
+            )
+
+    if stage == "multimodal_ttft":
+        total_results = result["total_results"]
+        text_stage = result["prefill"]
+        if use_flashattention:
+            text_layer_graph = analyzer.module.flashattention_transformer_layer_graph
+        else:
+            text_layer_graph = analyzer.module.transformer_layer_graph
+
+        if hasattr(analyzer.module, "vision_layer_graph"):
+            if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
+                vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
+            else:
+                vision_layer_graph = analyzer.module.vision_layer_graph
+            vision_stage = result["vision"]
+            nodes = []
+            edges = []
+            add_layer_graph(
+                vision_layer_graph,
+                vision_stage,
+                prefix="vision::",
+                label_prefix="Vision:",
+                root_id="mm_vision_root",
+                root_label="Vision Encoder",
+                root_target="vision_input",
+            )
+            add_layer_graph(
+                text_layer_graph,
+                text_stage,
+                prefix="text::",
+                label_prefix="Text:",
+                root_id="mm_text_root",
+                root_label="Text Prefill",
+                root_target="input",
+            )
+            return nodes, edges, total_results, hardware_info
+        # If no vision graph, fall back to text prefill
+        layer_graph = text_layer_graph
+        result = text_stage
+        stage = "prefill"
+        input_node_id = "input"
+        nodes = [{"label": input_node_id, "id": input_node_id}]
+        edges = []
     if stage == "vision":
         if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
             layer_graph = analyzer.module.vision_flashattention_layer_graph
@@ -83,6 +160,7 @@ def get_model_graph(model_id, hardware, inference_config):
         else:
             # Fallback for non-VLM models when vision stage is selected
             stage = "prefill"
+            graph_stage = "prefill"
             input_node_id = "input"
             layer_graph = analyzer.module.transformer_layer_graph
     elif use_flashattention:
@@ -90,8 +168,8 @@ def get_model_graph(model_id, hardware, inference_config):
     else:
         layer_graph = analyzer.module.transformer_layer_graph
     total_results = result["total_results"]
-    if stage != "chat":
-        result = result[stage]
+    if graph_stage != "chat":
+        result = result[graph_stage]
     else:
         result = result["prefill"]
 

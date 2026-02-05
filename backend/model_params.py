@@ -10,6 +10,7 @@ available_model_ids_sources = {
     "Qwen/Qwen3-4B-Instruct-2507": {"source": "huggingface"},
     "Qwen/Qwen3-32B": {"source": "huggingface"},
     "Qwen/Qwen3-30B-A3B-Instruct-2507": {"source": "huggingface"},
+    "Qwen/Qwen3-VL-32B-Instruct": {"source": "huggingface"},
     "Qwen/Qwen3-VL-8B-Instruct": {"source": "huggingface"},
     "LLM-Research/llama-2-7b": {"source": "modelscope"},
     "LLM-Research/llama-2-13b": {"source": "modelscope"},

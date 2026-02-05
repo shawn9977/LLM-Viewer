@@ -8,15 +8,17 @@
         <label for="prefill">Prefill</label>
         <input type="radio" v-model="inference_stage" id="chat" value="chat">
         <label for="prefill">Chat</label>
-        <input type="radio" v-model="inference_stage" id="vision" value="vision">
-        <label for="vision">Vision</label>
+        <input type="radio" v-model="inference_stage" id="multimodal_ttft" value="multimodal_ttft">
+        <label for="multimodal_ttft">MM TTFT</label>
+        <input type="radio" v-model="inference_stage" id="multimodal_tpot" value="multimodal_tpot">
+        <label for="multimodal_tpot">MM TPOT</label>
     </div>
     <div class="config_div">
         Batchsize:
         <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size">
         <input type="number" v-model.lazy="batch_size" min="1" max="256">
     </div>
-    <div class="config_div" v-if="inference_stage=='vision'">
+    <div class="config_div" v-if="inference_stage=='multimodal_ttft'">
         SeqLength:
         <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
         <input type="number" v-model.lazy="seq_length" min="1" max="4096">
