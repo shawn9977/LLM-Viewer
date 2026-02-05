@@ -21,6 +21,7 @@
         <select v-model="ip_port">
             <option value="172.16.112.46:5000">172.16.112.46</option>
             <option value="172.16.112.118:5000">172.16.112.118</option>
+            <option value="172.16.112.18:5000">172.16.112.18</option>
             <option value="127.0.0.1:5000">localhost</option>
         </select>
     </div>

@@ -78,8 +78,13 @@ def get_model_graph(model_id, hardware, inference_config):
     if stage == "vision":
         if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
             layer_graph = analyzer.module.vision_flashattention_layer_graph
-        else:
+        elif hasattr(analyzer.module, "vision_layer_graph"):
             layer_graph = analyzer.module.vision_layer_graph
+        else:
+            # Fallback for non-VLM models when vision stage is selected
+            stage = "prefill"
+            input_node_id = "input"
+            layer_graph = analyzer.module.transformer_layer_graph
     elif use_flashattention:
         layer_graph = analyzer.module.flashattention_transformer_layer_graph
     else:
@@ -91,7 +96,7 @@ def get_model_graph(model_id, hardware, inference_config):
         result = result["prefill"]
 
     for name, input_names in layer_graph.items():
-        if name in ["input", "output"]:
+        if name in ["input", "output", "vision_input"] or name not in result:
             OPs = 0
             memory_access = 0
             info = {}

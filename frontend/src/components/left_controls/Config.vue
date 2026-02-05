@@ -17,6 +17,10 @@
         <input type="number" v-model.lazy="batch_size" min="1" max="256">
     </div>
     <div class="config_div" v-if="inference_stage=='vision'">
+        SeqLength:
+        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
+        <input type="number" v-model.lazy="seq_length" min="1" max="4096">
+        <br/>
         Image Size:
         <input type="number" v-model.lazy="image_width" min="1" max="8192">
         <span> x </span>
