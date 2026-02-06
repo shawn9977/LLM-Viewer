@@ -34,14 +34,12 @@ def get_model_graph(model_id, hardware, inference_config):
     stage = inference_config["stage"]
     if stage == "vision":
         stage = "prefill"
+    if stage == "multimodal_ttft":
+        stage = "prefill"
+    elif stage == "multimodal_tpot":
+        stage = "decode"
     input_node_id = "vision_input" if stage == "vision" else "input"
     graph_stage = stage
-    if stage == "multimodal_ttft":
-        graph_stage = "prefill"
-        input_node_id = "input"
-    elif stage == "multimodal_tpot":
-        graph_stage = "decode"
-        input_node_id = "input"
 
     analyzer = get_analyzer(model_id, hardware)
     result = analyzer.analyze(
@@ -110,48 +108,12 @@ def get_model_graph(model_id, hardware, inference_config):
                 label=node_label,
             )
 
-    if stage == "multimodal_ttft":
-        total_results = result["total_results"]
-        text_stage = result["prefill"]
-        if use_flashattention:
-            text_layer_graph = analyzer.module.flashattention_transformer_layer_graph
-        else:
-            text_layer_graph = analyzer.module.transformer_layer_graph
+    has_vision = hasattr(analyzer.module, "vision_layer_graph")
+    if use_flashattention:
+        text_layer_graph = analyzer.module.flashattention_transformer_layer_graph
+    else:
+        text_layer_graph = analyzer.module.transformer_layer_graph
 
-        if hasattr(analyzer.module, "vision_layer_graph"):
-            if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
-                vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
-            else:
-                vision_layer_graph = analyzer.module.vision_layer_graph
-            vision_stage = result["vision"]
-            nodes = []
-            edges = []
-            add_layer_graph(
-                vision_layer_graph,
-                vision_stage,
-                prefix="vision::",
-                label_prefix="Vision:",
-                root_id="mm_vision_root",
-                root_label="Vision Encoder",
-                root_target="vision_input",
-            )
-            add_layer_graph(
-                text_layer_graph,
-                text_stage,
-                prefix="text::",
-                label_prefix="Text:",
-                root_id="mm_text_root",
-                root_label="Text Prefill",
-                root_target="input",
-            )
-            return nodes, edges, total_results, hardware_info
-        # If no vision graph, fall back to text prefill
-        layer_graph = text_layer_graph
-        result = text_stage
-        stage = "prefill"
-        input_node_id = "input"
-        nodes = [{"label": input_node_id, "id": input_node_id}]
-        edges = []
     if stage == "vision":
         if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
             layer_graph = analyzer.module.vision_flashattention_layer_graph
@@ -163,29 +125,61 @@ def get_model_graph(model_id, hardware, inference_config):
             graph_stage = "prefill"
             input_node_id = "input"
             layer_graph = analyzer.module.transformer_layer_graph
-    elif use_flashattention:
-        layer_graph = analyzer.module.flashattention_transformer_layer_graph
     else:
-        layer_graph = analyzer.module.transformer_layer_graph
+        layer_graph = text_layer_graph
+
     total_results = result["total_results"]
+
     if graph_stage != "chat":
-        result = result[graph_stage]
+        stage_result = result[graph_stage]
     else:
-        result = result["prefill"]
+        stage_result = result["prefill"]
+
+    if stage == "prefill" and has_vision:
+        if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
+            vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
+        else:
+            vision_layer_graph = analyzer.module.vision_layer_graph
+        nodes = []
+        edges = []
+        add_layer_graph(
+            vision_layer_graph,
+            result["vision"],
+            prefix="vision::",
+            label_prefix="Vision:",
+            root_id="mm_vision_root",
+            root_label="Vision Encoder",
+            root_target="vision_input",
+        )
+        add_layer_graph(
+            text_layer_graph,
+            result["prefill"],
+            prefix="text::",
+            label_prefix="Text:",
+            root_id="mm_text_root",
+            root_label="Text Prefill",
+            root_target="input",
+        )
+        if "multimodal_ttft" in total_results:
+            total_results["prefill"] = total_results["multimodal_ttft"]
+        return nodes, edges, total_results, hardware_info
 
     for name, input_names in layer_graph.items():
-        if name in ["input", "output", "vision_input"] or name not in result:
+        if name in ["input", "output", "vision_input"] or name not in stage_result:
             OPs = 0
             memory_access = 0
             info = {}
         else:
-            OPs = result[name]["OPs"]
-            memory_access = result[name]["memory_access"]
-            info = result[name]
+            OPs = stage_result[name]["OPs"]
+            memory_access = stage_result[name]["memory_access"]
+            info = stage_result[name]
         write_to_node(name, OPs, memory_access, info, input_names)
     if stage == "chat":
         # seq_length:seq_length+gen_length
-        total_results["chat"] = total_results["prefill"]
+        if has_vision and "multimodal_ttft" in total_results:
+            total_results["chat"] = total_results["multimodal_ttft"].copy()
+        else:
+            total_results["chat"] = total_results["prefill"]
         n_divide = min(10, gen_length)
         for lengthi in np.linspace(seq_length + 1, seq_length + gen_length, n_divide):
             gen_result = analyzer.analyze(
@@ -195,27 +189,56 @@ def get_model_graph(model_id, hardware, inference_config):
                 a_bit=a_bit,
                 kv_bit=kv_bit,
                 use_flashattention=use_flashattention,
+                image_size=image_size,
             )
             for k, v in gen_result["total_results"]["decode"].items():
                 total_results["chat"][k] += v * gen_length / n_divide
             for name, input_names in layer_graph.items():
                 if name in gen_result["decode"]:
-                    result[name]["OPs"] += (
+                    stage_result[name]["OPs"] += (
                         gen_result["decode"][name]["OPs"] * gen_length / n_divide
                     )
-                    result[name]["memory_access"] += (
+                    stage_result[name]["memory_access"] += (
                         gen_result["decode"][name]["memory_access"]
                         * gen_length
                         / n_divide
                     )
+        if has_vision:
+            if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
+                vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
+            else:
+                vision_layer_graph = analyzer.module.vision_layer_graph
+            nodes = []
+            edges = []
+            add_layer_graph(
+                vision_layer_graph,
+                result["vision"],
+                prefix="vision::",
+                label_prefix="Vision:",
+                root_id="mm_vision_root",
+                root_label="Vision Encoder",
+                root_target="vision_input",
+            )
+            add_layer_graph(
+                text_layer_graph,
+                stage_result,
+                prefix="text::",
+                label_prefix="Text:",
+                root_id="mm_text_root",
+                root_label="Text Chat",
+                root_target="input",
+            )
+            return nodes, edges, total_results, hardware_info
         for name, input_names in layer_graph.items():
             if name in ["input", "output"]:
                 OPs = 0
                 memory_access = 0
                 info = {}
             else:
-                OPs = result[name]["OPs"]
-                memory_access = result[name]["memory_access"]
+                OPs = stage_result[name]["OPs"]
+                memory_access = stage_result[name]["memory_access"]
                 info = {}
             write_to_node(name, OPs, memory_access, info, input_names)
+    if stage == "decode" and has_vision and "multimodal_tpot" in total_results:
+        total_results["decode"] = total_results["multimodal_tpot"]
     return nodes, edges, total_results, hardware_info

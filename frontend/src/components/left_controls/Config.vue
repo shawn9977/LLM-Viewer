@@ -8,27 +8,13 @@
         <label for="prefill">Prefill</label>
         <input type="radio" v-model="inference_stage" id="chat" value="chat">
         <label for="prefill">Chat</label>
-        <input type="radio" v-model="inference_stage" id="multimodal_ttft" value="multimodal_ttft">
-        <label for="multimodal_ttft">MM TTFT</label>
-        <input type="radio" v-model="inference_stage" id="multimodal_tpot" value="multimodal_tpot">
-        <label for="multimodal_tpot">MM TPOT</label>
     </div>
     <div class="config_div">
         Batchsize:
         <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size">
         <input type="number" v-model.lazy="batch_size" min="1" max="256">
     </div>
-    <div class="config_div" v-if="inference_stage=='multimodal_ttft'">
-        SeqLength:
-        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
-        <input type="number" v-model.lazy="seq_length" min="1" max="4096">
-        <br/>
-        Image Size:
-        <input type="number" v-model.lazy="image_width" min="1" max="8192">
-        <span> x </span>
-        <input type="number" v-model.lazy="image_height" min="1" max="8192">
-    </div>
-    <div class="config_div" v-else-if="inference_stage!='chat'">
+    <div class="config_div" v-if="inference_stage!='chat'">
         SeqLength:
         <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
         <input type="number" v-model.lazy="seq_length" min="1" max="4096">
@@ -43,6 +29,12 @@
         <input type="range" min="1" max="4096" value="1024" v-model.lazy="gen_length">
         <!-- <span id="seq_length">1024</span> -->
         <input type="number" v-model.lazy="gen_length" min="1" max="4096">
+    </div>
+    <div class="config_div" v-if="is_multimodal && (inference_stage=='prefill' || inference_stage=='chat')">
+        Image Size:
+        <input type="number" v-model.lazy="image_width" min="1" max="8192">
+        <span> x </span>
+        <input type="number" v-model.lazy="image_height" min="1" max="8192">
     </div>
     <div class="config_div">
         Tensor parallelism
@@ -117,6 +109,12 @@ const global_update_trigger = inject('global_update_trigger');
 
 const global_inference_config = inject('global_inference_config');
 const total_results = inject('total_results');
+const model_id = inject('model_id');
+
+const is_multimodal = computed(() => {
+    const id = model_id?.value || '';
+    return id.includes('Qwen3-VL');
+});
 
 const inference_stage = ref('decode');
 const batch_size = ref(1);
