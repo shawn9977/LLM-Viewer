@@ -1,0 +1,283 @@
+From 6931832a692bd1bb85d82e2fd7b78da1c1204236 Mon Sep 17 00:00:00 2001
+From: shawn9977 <shawn.zhao@intel.com>
+Date: Fri, 6 Feb 2026 11:06:00 +0800
+Subject: [PATCH 4/7] remove MMTTFT and MMTPOT stage, use prefill and decode
+ stage ,only add image_size
+
+---
+ backend/get_model_graph.py                    | 145 ++++++++++--------
+ .../src/components/left_controls/Config.vue   |  28 ++--
+ 2 files changed, 97 insertions(+), 76 deletions(-)
+
+diff --git a/backend/get_model_graph.py b/backend/get_model_graph.py
+index 7827a1f..c764ec1 100644
+--- a/backend/get_model_graph.py
++++ b/backend/get_model_graph.py
+@@ -34,14 +34,12 @@ def get_model_graph(model_id, hardware, inference_config):
+     stage = inference_config["stage"]
+     if stage == "vision":
+         stage = "prefill"
+-    input_node_id = "vision_input" if stage == "vision" else "input"
+-    graph_stage = stage
+     if stage == "multimodal_ttft":
+-        graph_stage = "prefill"
+-        input_node_id = "input"
++        stage = "prefill"
+     elif stage == "multimodal_tpot":
+-        graph_stage = "decode"
+-        input_node_id = "input"
++        stage = "decode"
++    input_node_id = "vision_input" if stage == "vision" else "input"
++    graph_stage = stage
+ 
+     analyzer = get_analyzer(model_id, hardware)
+     result = analyzer.analyze(
+@@ -110,48 +108,12 @@ def get_model_graph(model_id, hardware, inference_config):
+                 label=node_label,
+             )
+ 
+-    if stage == "multimodal_ttft":
+-        total_results = result["total_results"]
+-        text_stage = result["prefill"]
+-        if use_flashattention:
+-            text_layer_graph = analyzer.module.flashattention_transformer_layer_graph
+-        else:
+-            text_layer_graph = analyzer.module.transformer_layer_graph
++    has_vision = hasattr(analyzer.module, "vision_layer_graph")
++    if use_flashattention:
++        text_layer_graph = analyzer.module.flashattention_transformer_layer_graph
++    else:
++        text_layer_graph = analyzer.module.transformer_layer_graph
+ 
+-        if hasattr(analyzer.module, "vision_layer_graph"):
+-            if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
+-                vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
+-            else:
+-                vision_layer_graph = analyzer.module.vision_layer_graph
+-            vision_stage = result["vision"]
+-            nodes = []
+-            edges = []
+-            add_layer_graph(
+-                vision_layer_graph,
+-                vision_stage,
+-                prefix="vision::",
+-                label_prefix="Vision:",
+-                root_id="mm_vision_root",
+-                root_label="Vision Encoder",
+-                root_target="vision_input",
+-            )
+-            add_layer_graph(
+-                text_layer_graph,
+-                text_stage,
+-                prefix="text::",
+-                label_prefix="Text:",
+-                root_id="mm_text_root",
+-                root_label="Text Prefill",
+-                root_target="input",
+-            )
+-            return nodes, edges, total_results, hardware_info
+-        # If no vision graph, fall back to text prefill
+-        layer_graph = text_layer_graph
+-        result = text_stage
+-        stage = "prefill"
+-        input_node_id = "input"
+-        nodes = [{"label": input_node_id, "id": input_node_id}]
+-        edges = []
+     if stage == "vision":
+         if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
+             layer_graph = analyzer.module.vision_flashattention_layer_graph
+@@ -163,29 +125,61 @@ def get_model_graph(model_id, hardware, inference_config):
+             graph_stage = "prefill"
+             input_node_id = "input"
+             layer_graph = analyzer.module.transformer_layer_graph
+-    elif use_flashattention:
+-        layer_graph = analyzer.module.flashattention_transformer_layer_graph
+     else:
+-        layer_graph = analyzer.module.transformer_layer_graph
++        layer_graph = text_layer_graph
++
+     total_results = result["total_results"]
++
+     if graph_stage != "chat":
+-        result = result[graph_stage]
++        stage_result = result[graph_stage]
+     else:
+-        result = result["prefill"]
++        stage_result = result["prefill"]
++
++    if stage == "prefill" and has_vision:
++        if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
++            vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
++        else:
++            vision_layer_graph = analyzer.module.vision_layer_graph
++        nodes = []
++        edges = []
++        add_layer_graph(
++            vision_layer_graph,
++            result["vision"],
++            prefix="vision::",
++            label_prefix="Vision:",
++            root_id="mm_vision_root",
++            root_label="Vision Encoder",
++            root_target="vision_input",
++        )
++        add_layer_graph(
++            text_layer_graph,
++            result["prefill"],
++            prefix="text::",
++            label_prefix="Text:",
++            root_id="mm_text_root",
++            root_label="Text Prefill",
++            root_target="input",
++        )
++        if "multimodal_ttft" in total_results:
++            total_results["prefill"] = total_results["multimodal_ttft"]
++        return nodes, edges, total_results, hardware_info
+ 
+     for name, input_names in layer_graph.items():
+-        if name in ["input", "output", "vision_input"] or name not in result:
++        if name in ["input", "output", "vision_input"] or name not in stage_result:
+             OPs = 0
+             memory_access = 0
+             info = {}
+         else:
+-            OPs = result[name]["OPs"]
+-            memory_access = result[name]["memory_access"]
+-            info = result[name]
++            OPs = stage_result[name]["OPs"]
++            memory_access = stage_result[name]["memory_access"]
++            info = stage_result[name]
+         write_to_node(name, OPs, memory_access, info, input_names)
+     if stage == "chat":
+         # seq_length:seq_length+gen_length
+-        total_results["chat"] = total_results["prefill"]
++        if has_vision and "multimodal_ttft" in total_results:
++            total_results["chat"] = total_results["multimodal_ttft"].copy()
++        else:
++            total_results["chat"] = total_results["prefill"]
+         n_divide = min(10, gen_length)
+         for lengthi in np.linspace(seq_length + 1, seq_length + gen_length, n_divide):
+             gen_result = analyzer.analyze(
+@@ -195,27 +189,56 @@ def get_model_graph(model_id, hardware, inference_config):
+                 a_bit=a_bit,
+                 kv_bit=kv_bit,
+                 use_flashattention=use_flashattention,
++                image_size=image_size,
+             )
+             for k, v in gen_result["total_results"]["decode"].items():
+                 total_results["chat"][k] += v * gen_length / n_divide
+             for name, input_names in layer_graph.items():
+                 if name in gen_result["decode"]:
+-                    result[name]["OPs"] += (
++                    stage_result[name]["OPs"] += (
+                         gen_result["decode"][name]["OPs"] * gen_length / n_divide
+                     )
+-                    result[name]["memory_access"] += (
++                    stage_result[name]["memory_access"] += (
+                         gen_result["decode"][name]["memory_access"]
+                         * gen_length
+                         / n_divide
+                     )
++        if has_vision:
++            if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
++                vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
++            else:
++                vision_layer_graph = analyzer.module.vision_layer_graph
++            nodes = []
++            edges = []
++            add_layer_graph(
++                vision_layer_graph,
++                result["vision"],
++                prefix="vision::",
++                label_prefix="Vision:",
++                root_id="mm_vision_root",
++                root_label="Vision Encoder",
++                root_target="vision_input",
++            )
++            add_layer_graph(
++                text_layer_graph,
++                stage_result,
++                prefix="text::",
++                label_prefix="Text:",
++                root_id="mm_text_root",
++                root_label="Text Chat",
++                root_target="input",
++            )
++            return nodes, edges, total_results, hardware_info
+         for name, input_names in layer_graph.items():
+             if name in ["input", "output"]:
+                 OPs = 0
+                 memory_access = 0
+                 info = {}
+             else:
+-                OPs = result[name]["OPs"]
+-                memory_access = result[name]["memory_access"]
++                OPs = stage_result[name]["OPs"]
++                memory_access = stage_result[name]["memory_access"]
+                 info = {}
+             write_to_node(name, OPs, memory_access, info, input_names)
++    if stage == "decode" and has_vision and "multimodal_tpot" in total_results:
++        total_results["decode"] = total_results["multimodal_tpot"]
+     return nodes, edges, total_results, hardware_info
+diff --git a/frontend/src/components/left_controls/Config.vue b/frontend/src/components/left_controls/Config.vue
+index 46d857d..fa07b8d 100644
+--- a/frontend/src/components/left_controls/Config.vue
++++ b/frontend/src/components/left_controls/Config.vue
+@@ -8,27 +8,13 @@
+         <label for="prefill">Prefill</label>
+         <input type="radio" v-model="inference_stage" id="chat" value="chat">
+         <label for="prefill">Chat</label>
+-        <input type="radio" v-model="inference_stage" id="multimodal_ttft" value="multimodal_ttft">
+-        <label for="multimodal_ttft">MM TTFT</label>
+-        <input type="radio" v-model="inference_stage" id="multimodal_tpot" value="multimodal_tpot">
+-        <label for="multimodal_tpot">MM TPOT</label>
+     </div>
+     <div class="config_div">
+         Batchsize:
+         <input type="range" min="1" max="256" value="1" v-model.lazy="batch_size">
+         <input type="number" v-model.lazy="batch_size" min="1" max="256">
+     </div>
+-    <div class="config_div" v-if="inference_stage=='multimodal_ttft'">
+-        SeqLength:
+-        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
+-        <input type="number" v-model.lazy="seq_length" min="1" max="4096">
+-        <br/>
+-        Image Size:
+-        <input type="number" v-model.lazy="image_width" min="1" max="8192">
+-        <span> x </span>
+-        <input type="number" v-model.lazy="image_height" min="1" max="8192">
+-    </div>
+-    <div class="config_div" v-else-if="inference_stage!='chat'">
++    <div class="config_div" v-if="inference_stage!='chat'">
+         SeqLength:
+         <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
+         <input type="number" v-model.lazy="seq_length" min="1" max="4096">
+@@ -44,6 +30,12 @@
+         <!-- <span id="seq_length">1024</span> -->
+         <input type="number" v-model.lazy="gen_length" min="1" max="4096">
+     </div>
++    <div class="config_div" v-if="is_multimodal && (inference_stage=='prefill' || inference_stage=='chat')">
++        Image Size:
++        <input type="number" v-model.lazy="image_width" min="1" max="8192">
++        <span> x </span>
++        <input type="number" v-model.lazy="image_height" min="1" max="8192">
++    </div>
+     <div class="config_div">
+         Tensor parallelism
+         <select v-model="tp_size">
+@@ -117,6 +109,12 @@ const global_update_trigger = inject('global_update_trigger');
+ 
+ const global_inference_config = inject('global_inference_config');
+ const total_results = inject('total_results');
++const model_id = inject('model_id');
++
++const is_multimodal = computed(() => {
++    const id = model_id?.value || '';
++    return id.includes('Qwen3-VL');
++});
+ 
+ const inference_stage = ref('decode');
+ const batch_size = ref(1);
+-- 
+2.34.1
+

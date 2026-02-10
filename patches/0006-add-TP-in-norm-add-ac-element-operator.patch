@@ -1,0 +1,216 @@
+From 54d4b4a1addef42afa9565d17c1a4db6676981f2 Mon Sep 17 00:00:00 2001
+From: shawn9977 <shawn.zhao@intel.com>
+Date: Mon, 9 Feb 2026 17:04:35 +0800
+Subject: [PATCH 6/7] add TP in norm/add/ac element operator
+
+---
+ backend/model_analyzer.py | 80 +++++++++++++++++++--------------------
+ 1 file changed, 40 insertions(+), 40 deletions(-)
+
+diff --git a/backend/model_analyzer.py b/backend/model_analyzer.py
+index d09a8f7..6fb9add 100644
+--- a/backend/model_analyzer.py
++++ b/backend/model_analyzer.py
+@@ -319,17 +319,17 @@ class LLMAnalyzer(ModelAnalyzer):
+         for name in self.module.get_norm_layers(model_params):
+             # sum sub pow sum div mul add
+             if "rmsnorm" in name:
+-                norm_OPs = batchsize * hidden_size * 1 * 4
++                norm_OPs = batchsize * (hidden_size / tp_size) * 1 * 4
+             else:
+-                norm_OPs = batchsize * hidden_size * 1 * 7
++                norm_OPs = batchsize * (hidden_size / tp_size) * 1 * 7
+ 
+             self._analyze_to_results(
+                 "decode",
+                 name,
+                 OPs=norm_OPs,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * 1 * a_byte,
+-                store_act=batchsize * hidden_size * 1 * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -338,10 +338,10 @@ class LLMAnalyzer(ModelAnalyzer):
+             self._analyze_to_results(
+                 "decode",
+                 name,
+-                OPs=batchsize * hidden_size * 1,
++                OPs=batchsize * (hidden_size / tp_size) * 1,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * 1 * a_byte,
+-                store_act=batchsize * hidden_size * 1 * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -349,10 +349,10 @@ class LLMAnalyzer(ModelAnalyzer):
+             self._analyze_to_results(
+                 "decode",
+                 name,
+-                OPs=batchsize * hidden_size * 1 * 5,
++                OPs=batchsize * (hidden_size / tp_size) * 1 * 5,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * 1 * a_byte,
+-                store_act=batchsize * hidden_size * 1 * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -415,17 +415,17 @@ class LLMAnalyzer(ModelAnalyzer):
+             )
+         for name in self.module.get_norm_layers(model_params):
+             if "rmsnorm" in name:
+-                norm_OPs = batchsize * hidden_size * seqlen * 4
++                norm_OPs = batchsize * (hidden_size / tp_size) * seqlen * 4
+             else:
+-                norm_OPs = batchsize * hidden_size * seqlen * 7
++                norm_OPs = batchsize * (hidden_size / tp_size) * seqlen * 7
+ 
+             self._analyze_to_results(
+                 "prefill",
+                 name,
+                 OPs=norm_OPs,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * seqlen * a_byte,
+-                store_act=batchsize * hidden_size * seqlen * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -433,10 +433,10 @@ class LLMAnalyzer(ModelAnalyzer):
+             self._analyze_to_results(
+                 "prefill",
+                 name,
+-                OPs=batchsize * hidden_size * seqlen * 1,
++                OPs=batchsize * (hidden_size / tp_size) * seqlen * 1,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * seqlen * a_byte,
+-                store_act=batchsize * hidden_size * seqlen * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -444,10 +444,10 @@ class LLMAnalyzer(ModelAnalyzer):
+             self._analyze_to_results(
+                 "prefill",
+                 name,
+-                OPs=batchsize * hidden_size * seqlen * 1 * 5,
++                OPs=batchsize * (hidden_size / tp_size) * seqlen * 1 * 5,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * seqlen * a_byte,
+-                store_act=batchsize * hidden_size * seqlen * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -643,17 +643,17 @@ class MoEAnalyzer(ModelAnalyzer):
+         for name in self.module.get_norm_layers(model_params):
+             # sum sub pow sum div mul add
+             if "rmsnorm" in name:
+-                norm_OPs = batchsize * hidden_size * 1 * 4
++                norm_OPs = batchsize * (hidden_size / tp_size) * 1 * 4
+             else:
+-                norm_OPs = batchsize * hidden_size * 1 * 7
++                norm_OPs = batchsize * (hidden_size / tp_size) * 1 * 7
+ 
+             self._analyze_to_results(
+                 "decode",
+                 name,
+                 OPs=norm_OPs,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * 1 * a_byte,
+-                store_act=batchsize * hidden_size * 1 * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -662,10 +662,10 @@ class MoEAnalyzer(ModelAnalyzer):
+             self._analyze_to_results(
+                 "decode",
+                 name,
+-                OPs=batchsize * hidden_size * 1,
++                OPs=batchsize * (hidden_size / tp_size) * 1,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * 1 * a_byte,
+-                store_act=batchsize * hidden_size * 1 * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * 1 * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -673,10 +673,10 @@ class MoEAnalyzer(ModelAnalyzer):
+             self._analyze_to_results(
+                 "decode",
+                 name,
+-                OPs=batchsize * hidden_size * 1 * 5 * num_active_experts,
++                OPs=batchsize * (hidden_size / tp_size) * 1 * 5 * num_active_experts,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * 1 * a_byte * num_active_experts,
+-                store_act=batchsize * hidden_size * 1 * a_byte * num_active_experts,
++                load_act=batchsize * (hidden_size / tp_size) * 1 * a_byte * num_active_experts,
++                store_act=batchsize * (hidden_size / tp_size) * 1 * a_byte * num_active_experts,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -739,17 +739,17 @@ class MoEAnalyzer(ModelAnalyzer):
+             )
+         for name in self.module.get_norm_layers(model_params):
+             if "rmsnorm" in name:
+-                norm_OPs = batchsize * hidden_size * seqlen * 4
++                norm_OPs = batchsize * (hidden_size / tp_size) * seqlen * 4
+             else:
+-                norm_OPs = batchsize * hidden_size * seqlen * 7
++                norm_OPs = batchsize * (hidden_size / tp_size) * seqlen * 7
+ 
+             self._analyze_to_results(
+                 "prefill",
+                 name,
+                 OPs=norm_OPs,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * seqlen * a_byte,
+-                store_act=batchsize * hidden_size * seqlen * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -757,10 +757,10 @@ class MoEAnalyzer(ModelAnalyzer):
+             self._analyze_to_results(
+                 "prefill",
+                 name,
+-                OPs=batchsize * hidden_size * seqlen * 1,
++                OPs=batchsize * (hidden_size / tp_size) * seqlen * 1,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * seqlen * a_byte,
+-                store_act=batchsize * hidden_size * seqlen * a_byte,
++                load_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
++                store_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+@@ -768,10 +768,10 @@ class MoEAnalyzer(ModelAnalyzer):
+             self._analyze_to_results(
+                 "prefill",
+                 name,
+-                OPs=batchsize * hidden_size * seqlen * 1 * 5 * num_active_experts,
++                OPs=batchsize * (hidden_size / tp_size) * seqlen * 1 * 5 * num_active_experts,
+                 load_weight=0,
+-                load_act=batchsize * hidden_size * seqlen * a_byte * num_active_experts,
+-                store_act=batchsize * hidden_size * seqlen * a_byte * num_active_experts,
++                load_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte * num_active_experts,
++                store_act=batchsize * (hidden_size / tp_size) * seqlen * a_byte * num_active_experts,
+                 load_kv_cache=0,
+                 store_kv_cache=0,
+             )
+-- 
+2.34.1
+
