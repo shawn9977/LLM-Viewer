@@ -36,6 +36,10 @@
         <span> x </span>
         <input type="number" v-model.lazy="image_height" min="1" max="8192">
     </div>
+    <div class="config_div" v-if="is_omni && (inference_stage=='prefill' || inference_stage=='chat')">
+        Audio Length (s):
+        <input type="number" v-model.lazy="audio_length" min="0" max="3600" step="0.1">
+    </div>
     <div class="config_div">
         Tensor parallelism
         <select v-model="tp_size">
@@ -113,7 +117,12 @@ const model_id = inject('model_id');
 
 const is_multimodal = computed(() => {
     const id = model_id?.value || '';
-    return id.includes('Qwen3-VL');
+    return id.includes('Qwen3-VL') || id.includes('Omni');
+});
+
+const is_omni = computed(() => {
+    const id = model_id?.value || '';
+    return id.includes('Omni');
 });
 
 const inference_stage = ref('decode');
@@ -121,6 +130,7 @@ const batch_size = ref(1);
 const seq_length = ref(1024);
 const image_width = ref(1024);
 const image_height = ref(1024);
+const audio_length = ref(5.0);
 const gen_length = ref(1);
 const tp_size = ref(1);
 const w_quant = ref('8-bit');
@@ -159,6 +169,11 @@ watch(image_height, (n) => {
         width: image_width.value,
         height: n
     }
+    global_update_trigger.value += 1
+})
+
+watch(audio_length, (n) => {
+    global_inference_config.value.audio_length = n
     global_update_trigger.value += 1
 })
 

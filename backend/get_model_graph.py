@@ -30,6 +30,7 @@ def get_model_graph(model_id, hardware, inference_config):
     gen_length = int(inference_config["gen_length"])
     tp_size = int(inference_config["tp_size"])
     image_size = inference_config.get("image_size")
+    audio_length = inference_config.get("audio_length")
 
     stage = inference_config["stage"]
     if stage == "vision":
@@ -50,7 +51,8 @@ def get_model_graph(model_id, hardware, inference_config):
         kv_bit=kv_bit,
         use_flashattention=use_flashattention,
         tp_size=tp_size,
-        image_size=image_size
+        image_size=image_size,
+        audio_length=audio_length
     )
     bandwidth, max_OPS, onchip_buffer = get_hardware_info(hardware, w_bit, a_bit, kv_bit)
     GQA = analyzer.if_group_qa()
@@ -109,6 +111,7 @@ def get_model_graph(model_id, hardware, inference_config):
             )
 
     has_vision = hasattr(analyzer.module, "vision_layer_graph")
+    has_audio = hasattr(analyzer.module, "audio_layer_graph")
     if use_flashattention:
         text_layer_graph = analyzer.module.flashattention_transformer_layer_graph
     else:
@@ -125,6 +128,17 @@ def get_model_graph(model_id, hardware, inference_config):
             graph_stage = "prefill"
             input_node_id = "input"
             layer_graph = analyzer.module.transformer_layer_graph
+    elif stage == "audio":
+        if use_flashattention and hasattr(analyzer.module, "audio_flashattention_layer_graph"):
+            layer_graph = analyzer.module.audio_flashattention_layer_graph
+        elif hasattr(analyzer.module, "audio_layer_graph"):
+            layer_graph = analyzer.module.audio_layer_graph
+        else:
+            # Fallback for non-audio models when audio stage is selected
+            stage = "prefill"
+            graph_stage = "prefill"
+            input_node_id = "input"
+            layer_graph = analyzer.module.transformer_layer_graph
     else:
         layer_graph = text_layer_graph
 
@@ -135,22 +149,43 @@ def get_model_graph(model_id, hardware, inference_config):
     else:
         stage_result = result["prefill"]
 
-    if stage == "prefill" and has_vision:
-        if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
-            vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
-        else:
-            vision_layer_graph = analyzer.module.vision_layer_graph
+    if stage == "prefill" and (has_vision or has_audio):
         nodes = []
         edges = []
-        add_layer_graph(
-            vision_layer_graph,
-            result["vision"],
-            prefix="vision::",
-            label_prefix="Vision:",
-            root_id="mm_vision_root",
-            root_label="Vision Encoder",
-            root_target="vision_input",
-        )
+
+        # 添加视觉编码器
+        if has_vision and "vision" in result and result["vision"]:
+            if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
+                vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
+            else:
+                vision_layer_graph = analyzer.module.vision_layer_graph
+            add_layer_graph(
+                vision_layer_graph,
+                result["vision"],
+                prefix="vision::",
+                label_prefix="Vision:",
+                root_id="mm_vision_root",
+                root_label="Vision Encoder",
+                root_target="vision_input",
+            )
+
+        # 添加音频编码器
+        if has_audio and "audio" in result and result["audio"]:
+            if use_flashattention and hasattr(analyzer.module, "audio_flashattention_layer_graph"):
+                audio_layer_graph = analyzer.module.audio_flashattention_layer_graph
+            else:
+                audio_layer_graph = analyzer.module.audio_layer_graph
+            add_layer_graph(
+                audio_layer_graph,
+                result["audio"],
+                prefix="audio::",
+                label_prefix="Audio:",
+                root_id="mm_audio_root",
+                root_label="Audio Encoder",
+                root_target="audio_input",
+            )
+
+        # 添加文本 Prefill
         add_layer_graph(
             text_layer_graph,
             result["prefill"],
@@ -190,6 +225,7 @@ def get_model_graph(model_id, hardware, inference_config):
                 kv_bit=kv_bit,
                 use_flashattention=use_flashattention,
                 image_size=image_size,
+                audio_length=audio_length,
             )
             for k, v in gen_result["total_results"]["decode"].items():
                 total_results["chat"][k] += v * gen_length / n_divide
@@ -203,22 +239,37 @@ def get_model_graph(model_id, hardware, inference_config):
                         * gen_length
                         / n_divide
                     )
-        if has_vision:
+        if has_vision or has_audio:
             if use_flashattention and hasattr(analyzer.module, "vision_flashattention_layer_graph"):
                 vision_layer_graph = analyzer.module.vision_flashattention_layer_graph
             else:
-                vision_layer_graph = analyzer.module.vision_layer_graph
+                vision_layer_graph = analyzer.module.vision_layer_graph if has_vision else None
             nodes = []
             edges = []
-            add_layer_graph(
-                vision_layer_graph,
-                result["vision"],
-                prefix="vision::",
-                label_prefix="Vision:",
-                root_id="mm_vision_root",
-                root_label="Vision Encoder",
-                root_target="vision_input",
-            )
+            if has_vision and vision_layer_graph:
+                add_layer_graph(
+                    vision_layer_graph,
+                    result.get("vision", {}),
+                    prefix="vision::",
+                    label_prefix="Vision:",
+                    root_id="mm_vision_root",
+                    root_label="Vision Encoder",
+                    root_target="vision_input",
+                )
+            if has_audio:
+                if use_flashattention and hasattr(analyzer.module, "audio_flashattention_layer_graph"):
+                    audio_layer_graph = analyzer.module.audio_flashattention_layer_graph
+                else:
+                    audio_layer_graph = analyzer.module.audio_layer_graph
+                add_layer_graph(
+                    audio_layer_graph,
+                    result.get("audio", {}),
+                    prefix="audio::",
+                    label_prefix="Audio:",
+                    root_id="mm_audio_root",
+                    root_label="Audio Encoder",
+                    root_target="audio_input",
+                )
             add_layer_graph(
                 text_layer_graph,
                 stage_result,
@@ -239,6 +290,6 @@ def get_model_graph(model_id, hardware, inference_config):
                 memory_access = stage_result[name]["memory_access"]
                 info = {}
             write_to_node(name, OPs, memory_access, info, input_names)
-    if stage == "decode" and has_vision and "multimodal_tpot" in total_results:
+    if stage == "decode" and (has_vision or has_audio) and "multimodal_tpot" in total_results:
         total_results["decode"] = total_results["multimodal_tpot"]
     return nodes, edges, total_results, hardware_info

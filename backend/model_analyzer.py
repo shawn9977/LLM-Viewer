@@ -25,6 +25,7 @@ MODEL_ANALYZER_REGISTRY = {
     "LLMAnalyzer": ["qwen3", "qwen2", "qwen2_5", "llama", "chatglm"],
     "MoEAnalyzer": ["qwen3_moe", "qwen2_moe", "qwen2_5_moe"],
     "VLMAnalyzer": ["qwen3_vl", "qwen2_vl", "qwen2_5_vl"],
+    "Qwen3OmniAnalyzer": ["qwen3_omni_moe"],
 }
 
 
@@ -45,7 +46,7 @@ class ModelAnalyzer:
         self.batchsize = None
         self.seqlen = None
 
-    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None):
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None, audio_length=None):
         """
         seqlen: sequence length
         batchsize: batch size
@@ -196,7 +197,7 @@ class ModelAnalyzer:
 class LLMAnalyzer(ModelAnalyzer):
     def __init__(self, model_id, hardware, model_params=None):
         super().__init__(model_id, hardware, model_params=model_params)
-    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None):
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None, audio_length=None):
         assert seqlen > 0
         assert batchsize > 0
         self.results = {"decode": {}, "prefill": {}}
@@ -496,7 +497,7 @@ class MoEAnalyzer(ModelAnalyzer):
     def __init__(self, model_id, hardware, model_params=None):
         super().__init__(model_id, hardware, model_params=model_params)
 
-    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size = 1, image_size=None):
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None, audio_length=None):
         assert seqlen > 0
         assert batchsize > 0
         self.results = {"decode": {}, "prefill": {}}
@@ -821,7 +822,7 @@ class VLMAnalyzer(ModelAnalyzer):
     def __init__(self, model_id, hardware, model_params=None):
         super().__init__(model_id, hardware, model_params=model_params)
 
-    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None):
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None, use_flashattention=False, kv_token_ratio=1, tp_size=1, image_size=None, audio_length=None):
         """
         分析 VLM 模型的性能，包括文本分支和视觉分支
 
@@ -1373,6 +1374,630 @@ class VLMAnalyzer(ModelAnalyzer):
         # 保存总结果并返回
         self.results["total_results"] = total_results
         return self.results
+
+
+class Qwen3OmniAnalyzer(ModelAnalyzer):
+    """全模态模型分析器，支持 Thinker 部分（文本+视觉+音频理解）"""
+
+    def __init__(self, model_id, hardware, model_params=None):
+        super().__init__(model_id, hardware, model_params=model_params)
+
+    def analyze(self, seqlen, batchsize, w_bit=16, a_bit=16, kv_bit=None,
+                use_flashattention=False, kv_token_ratio=1, tp_size=1,
+                image_size=None, audio_length=None):
+        """
+        分析 Omni 模型的 Thinker 部分（文本+视觉+音频理解）
+
+        参数:
+            seqlen: 文本序列长度
+            batchsize: 批次大小
+            w_bit: 权重位宽
+            a_bit: 激活值位宽
+            kv_bit: KV 缓存位宽
+            use_flashattention: 是否使用 Flash Attention
+            kv_token_ratio: KV 压缩比率
+            tp_size: 张量并行大小
+            image_size: 图像尺寸（宽x高）
+            audio_length: 音频时长（秒）
+        """
+        assert seqlen > 0
+        assert batchsize > 0
+
+        # 初始化结果字典
+        self.results = {"decode": {}, "prefill": {}, "vision": {}, "audio": {}}
+        if kv_bit is None:
+            kv_bit = a_bit
+
+        self.w_bit = w_bit
+        self.a_bit = a_bit
+        self.kv_bit = kv_bit
+        self.batchsize = batchsize
+        self.seqlen = seqlen
+        self.tp_size = tp_size
+
+        w_byte = w_bit / 8
+        a_byte = a_bit / 8
+        kv_byte = kv_bit / 8
+
+        model_params = self.model_params
+
+        # ===== 计算各模态的 token 数 =====
+        text_tokens = seqlen
+        visual_tokens = 0
+        audio_tokens = 0
+
+        # 计算视觉 token 数
+        if image_size is not None:
+            def _parse_image_size(size):
+                if isinstance(size, dict):
+                    width = size.get("width") or size.get("w")
+                    height = size.get("height") or size.get("h")
+                    if width and height:
+                        return int(width), int(height)
+                if isinstance(size, (list, tuple)) and len(size) == 2:
+                    return int(size[0]), int(size[1])
+                if isinstance(size, str) and "x" in size:
+                    parts = size.lower().split("x")
+                    if len(parts) == 2:
+                        return int(parts[0]), int(parts[1])
+                return 1024, 1024
+
+            image_w, image_h = _parse_image_size(image_size)
+            patch_size = self.module.get_vision_patch_size(model_params)
+            spatial_merge_size = self.module.get_vision_spatial_merge_size(model_params)
+            num_patches_w = max(1, math.ceil(image_w / patch_size))
+            num_patches_h = max(1, math.ceil(image_h / patch_size))
+            num_patches = num_patches_w * num_patches_h
+            visual_tokens = max(1, math.ceil(num_patches / max(1, spatial_merge_size) ** 2))
+
+        # 计算音频 token 数
+        if audio_length is not None:
+            # 根据 config: n_window=50, conv 下采样 8x
+            audio_tokens = max(1, int(audio_length * 50 / 8))
+
+        # Prefill 阶段的总 token 数（包含所有模态）
+        prefill_total_tokens = text_tokens + visual_tokens + audio_tokens
+
+        # ===== 文本分支（MoE Transformer）=====
+        num_attention_heads = self.module.get_num_attention_heads(model_params)
+        hidden_size = self.module.get_hidden_size(model_params)
+        num_key_value_heads = self.module.get_num_key_value_heads(model_params)
+        num_hidden_layers = self.module.get_num_hidden_layers(model_params)
+        num_active_experts = self.module.get_num_active_experts(model_params)
+
+        # 线性层分析
+        for name, (ic, oc) in self.module.get_linear_layers(model_params, tp_size).items():
+            is_kv_proj = name in ["k_proj", "v_proj"]
+            is_normal_proj = not is_kv_proj
+            is_expert_proj = name in ["gate_proj", "up_proj", "down_proj"]
+
+            if is_expert_proj:
+                # MoE 专家层
+                self._analyze_to_results(
+                    "decode", name,
+                    OPs=ic * oc * batchsize * 2 * num_active_experts,
+                    load_weight=ic * oc * w_byte * num_active_experts,
+                    load_act=ic * batchsize * a_byte * num_active_experts,
+                    store_act=oc * batchsize * a_byte * num_active_experts,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+                self._analyze_to_results(
+                    "prefill", name,
+                    OPs=ic * oc * batchsize * prefill_total_tokens * 2 * num_active_experts,
+                    load_weight=ic * oc * w_byte * num_active_experts,
+                    load_act=ic * batchsize * prefill_total_tokens * a_byte * num_active_experts,
+                    store_act=oc * batchsize * prefill_total_tokens * a_byte * num_active_experts,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+            else:
+                # 普通线性层
+                self._analyze_to_results(
+                    "decode", name,
+                    OPs=ic * oc * batchsize * 2,
+                    load_weight=ic * oc * w_byte,
+                    load_act=ic * batchsize * a_byte,
+                    store_act=0 if is_kv_proj else oc * batchsize * a_byte,
+                    load_kv_cache=0,
+                    store_kv_cache=(0 if is_normal_proj else oc * batchsize * kv_byte),
+                )
+                self._analyze_to_results(
+                    "prefill", name,
+                    OPs=ic * oc * batchsize * prefill_total_tokens * 2,
+                    load_weight=ic * oc * w_byte,
+                    load_act=ic * batchsize * prefill_total_tokens * a_byte,
+                    store_act=(0 if is_kv_proj else oc * batchsize * prefill_total_tokens * a_byte),
+                    load_kv_cache=0,
+                    store_kv_cache=(0 if is_normal_proj else oc * batchsize * prefill_total_tokens * kv_byte),
+                )
+
+        # 注意力机制
+        head_size = hidden_size // num_attention_heads
+        tp_num_attention_heads = max(1, num_attention_heads // tp_size)
+        tp_num_key_value_heads = max(1, num_key_value_heads // tp_size)
+
+        # decode 阶段（使用 prefill_total_tokens 作为 KV cache 长度）
+        qk_matmul_OPs = prefill_total_tokens * head_size * tp_num_attention_heads * batchsize * 2
+        sv_matmul_OPs = 1 * head_size * prefill_total_tokens * tp_num_attention_heads * batchsize * 2
+        softmax_OPs = batchsize * tp_num_attention_heads * prefill_total_tokens * 1 * 5
+
+        if use_flashattention:
+            name = "fused_attention"
+            bandwidth, max_OPS, onchip_buffer = get_hardware_info(self.hardware, w_bit, a_bit, kv_bit)
+            block_size_r = min(math.ceil(onchip_buffer / (kv_byte * head_size)), head_size)
+            n_blocks_r = math.ceil(1 / block_size_r)
+            q_numel = 1 * head_size * batchsize * tp_num_attention_heads * a_byte
+            o_numel = 1 * prefill_total_tokens * batchsize * tp_num_attention_heads * a_byte
+            self._analyze_to_results(
+                "decode", name,
+                OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
+                load_weight=0, load_act=q_numel, store_act=o_numel * 2,
+                load_kv_cache=n_blocks_r * prefill_total_tokens * head_size * batchsize * tp_num_key_value_heads * kv_byte * 2,
+                store_kv_cache=0,
+            )
+        else:
+            self._analyze_to_results(
+                "decode", "qk_matmul",
+                OPs=qk_matmul_OPs, load_weight=0,
+                load_act=1 * head_size * batchsize * tp_num_attention_heads * a_byte,
+                store_act=1 * prefill_total_tokens * batchsize * tp_num_attention_heads * a_byte,
+                load_kv_cache=prefill_total_tokens * head_size * batchsize * tp_num_key_value_heads * kv_byte,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "decode", "sv_matmul",
+                OPs=sv_matmul_OPs, load_weight=0,
+                load_act=1 * prefill_total_tokens * batchsize * tp_num_attention_heads * a_byte,
+                store_act=1 * head_size * batchsize * tp_num_attention_heads * a_byte,
+                load_kv_cache=prefill_total_tokens * head_size * batchsize * tp_num_key_value_heads * kv_byte,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "decode", "softmax",
+                OPs=softmax_OPs, load_weight=0,
+                load_act=batchsize * tp_num_attention_heads * prefill_total_tokens * a_byte,
+                store_act=batchsize * tp_num_attention_heads * prefill_total_tokens * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        # 归一化层、残差连接、激活函数
+        for name in self.module.get_norm_layers(model_params):
+            norm_OPs = batchsize * (hidden_size / tp_size) * 1 * 4
+            self._analyze_to_results(
+                "decode", name, OPs=norm_OPs, load_weight=0,
+                load_act=batchsize * (hidden_size / tp_size) * a_byte,
+                store_act=batchsize * (hidden_size / tp_size) * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        for name in ["attn_add", "mlp_add"]:
+            self._analyze_to_results(
+                "decode", name,
+                OPs=batchsize * (hidden_size / tp_size),
+                load_weight=0,
+                load_act=batchsize * (hidden_size / tp_size) * a_byte,
+                store_act=batchsize * (hidden_size / tp_size) * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        for name in ["mlp_act"]:
+            self._analyze_to_results(
+                "decode", name,
+                OPs=batchsize * (hidden_size / tp_size) * 5 * num_active_experts,
+                load_weight=0,
+                load_act=batchsize * (hidden_size / tp_size) * a_byte * num_active_experts,
+                store_act=batchsize * (hidden_size / tp_size) * a_byte * num_active_experts,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        # prefill 阶段
+        qk_matmul_OPs = prefill_total_tokens * prefill_total_tokens * head_size * tp_num_attention_heads * batchsize * 2
+        sv_matmul_OPs = prefill_total_tokens * head_size * prefill_total_tokens * tp_num_attention_heads * batchsize * 2
+        softmax_OPs = batchsize * tp_num_attention_heads * prefill_total_tokens * prefill_total_tokens * 5
+
+        if use_flashattention:
+            name = "fused_attention"
+            bandwidth, max_OPS, onchip_buffer = get_hardware_info(self.hardware, w_bit, a_bit, kv_bit)
+            block_size_r = min(math.ceil(onchip_buffer / (kv_byte * head_size)), head_size)
+            n_blocks_r = math.ceil(prefill_total_tokens / block_size_r)
+            q_numel = prefill_total_tokens * head_size * batchsize * tp_num_attention_heads * a_byte
+            o_numel = prefill_total_tokens * prefill_total_tokens * batchsize * tp_num_attention_heads * a_byte
+            self._analyze_to_results(
+                "prefill", name,
+                OPs=qk_matmul_OPs + sv_matmul_OPs + softmax_OPs,
+                load_weight=0, load_act=q_numel, store_act=o_numel * 2,
+                load_kv_cache=n_blocks_r * prefill_total_tokens * head_size * batchsize * tp_num_key_value_heads * kv_byte * 2,
+                store_kv_cache=0,
+            )
+        else:
+            self._analyze_to_results(
+                "prefill", "qk_matmul",
+                OPs=qk_matmul_OPs, load_weight=0,
+                load_act=prefill_total_tokens * head_size * batchsize * tp_num_key_value_heads * a_byte,
+                store_act=prefill_total_tokens * prefill_total_tokens * batchsize * tp_num_attention_heads * a_byte,
+                load_kv_cache=prefill_total_tokens * head_size * batchsize * tp_num_key_value_heads * kv_byte,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "prefill", "sv_matmul",
+                OPs=sv_matmul_OPs, load_weight=0,
+                load_act=prefill_total_tokens * prefill_total_tokens * batchsize * tp_num_attention_heads * a_byte,
+                store_act=prefill_total_tokens * head_size * batchsize * tp_num_attention_heads * a_byte,
+                load_kv_cache=prefill_total_tokens * head_size * batchsize * tp_num_key_value_heads * kv_byte,
+                store_kv_cache=0,
+            )
+            self._analyze_to_results(
+                "prefill", "softmax",
+                OPs=softmax_OPs, load_weight=0,
+                load_act=batchsize * tp_num_attention_heads * prefill_total_tokens * prefill_total_tokens * a_byte,
+                store_act=batchsize * tp_num_attention_heads * prefill_total_tokens * prefill_total_tokens * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        for name in self.module.get_norm_layers(model_params):
+            norm_OPs = batchsize * (hidden_size / tp_size) * prefill_total_tokens * 4
+            self._analyze_to_results(
+                "prefill", name, OPs=norm_OPs, load_weight=0,
+                load_act=batchsize * (hidden_size / tp_size) * prefill_total_tokens * a_byte,
+                store_act=batchsize * (hidden_size / tp_size) * prefill_total_tokens * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        for name in ["attn_add", "mlp_add"]:
+            self._analyze_to_results(
+                "prefill", name,
+                OPs=batchsize * (hidden_size / tp_size) * prefill_total_tokens,
+                load_weight=0,
+                load_act=batchsize * (hidden_size / tp_size) * prefill_total_tokens * a_byte,
+                store_act=batchsize * (hidden_size / tp_size) * prefill_total_tokens * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        for name in ["mlp_act"]:
+            self._analyze_to_results(
+                "prefill", name,
+                OPs=batchsize * (hidden_size / tp_size) * prefill_total_tokens * 5 * num_active_experts,
+                load_weight=0,
+                load_act=batchsize * (hidden_size / tp_size) * prefill_total_tokens * a_byte * num_active_experts,
+                store_act=batchsize * (hidden_size / tp_size) * prefill_total_tokens * a_byte * num_active_experts,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        # ===== 视觉分支 =====
+        if image_size is not None:
+            vision_hidden_size = self.module.get_vision_hidden_size(model_params)
+            vision_num_heads = self.module.get_vision_num_heads(model_params)
+            vision_intermediate_size = self.module.get_vision_intermediate_size(model_params)
+            vision_num_layers = self.module.get_vision_num_hidden_layers(model_params)
+            in_channels = self.module.get_vision_in_channels(model_params)
+
+            # Patch Embedding
+            patch_ic = in_channels * patch_size * patch_size
+            patch_oc = vision_hidden_size
+            self._analyze_to_results(
+                "vision", "vision_patch_embed",
+                OPs=patch_ic * patch_oc * batchsize * num_patches * 2,
+                load_weight=patch_ic * patch_oc * w_byte,
+                load_act=patch_ic * batchsize * num_patches * a_byte,
+                store_act=patch_oc * batchsize * num_patches * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+            # 视觉线性层
+            for name, (ic, oc) in self.module.get_vision_linear_layers(model_params, tp_size).items():
+                self._analyze_to_results(
+                    "vision", name,
+                    OPs=ic * oc * batchsize * visual_tokens * 2,
+                    load_weight=ic * oc * w_byte,
+                    load_act=ic * batchsize * visual_tokens * a_byte,
+                    store_act=oc * batchsize * visual_tokens * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+
+            # 视觉注意力
+            vision_head_size = vision_hidden_size // vision_num_heads
+            v_qk_OPs = visual_tokens * visual_tokens * vision_head_size * vision_num_heads * batchsize * 2
+            v_sv_OPs = visual_tokens * vision_head_size * visual_tokens * vision_num_heads * batchsize * 2
+            v_softmax_OPs = batchsize * vision_num_heads * visual_tokens * visual_tokens * 5
+
+            if use_flashattention:
+                name = "vision_fused_attention"
+                bandwidth, max_OPS, onchip_buffer = get_hardware_info(self.hardware, w_bit, a_bit, kv_bit)
+                block_size_r = min(math.ceil(onchip_buffer / (a_byte * vision_head_size)), vision_head_size)
+                n_blocks_r = math.ceil(visual_tokens / block_size_r)
+                q_numel = visual_tokens * vision_head_size * batchsize * vision_num_heads * a_byte
+                kv_numel = visual_tokens * vision_head_size * batchsize * vision_num_heads * a_byte * 2
+                o_numel = visual_tokens * visual_tokens * batchsize * vision_num_heads * a_byte
+                self._analyze_to_results(
+                    "vision", name,
+                    OPs=v_qk_OPs + v_sv_OPs + v_softmax_OPs,
+                    load_weight=0, load_act=q_numel + kv_numel, store_act=o_numel * 2,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+            else:
+                self._analyze_to_results(
+                    "vision", "vision_qk_matmul",
+                    OPs=v_qk_OPs, load_weight=0,
+                    load_act=visual_tokens * vision_head_size * batchsize * vision_num_heads * a_byte,
+                    store_act=visual_tokens * visual_tokens * batchsize * vision_num_heads * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+                self._analyze_to_results(
+                    "vision", "vision_sv_matmul",
+                    OPs=v_sv_OPs, load_weight=0,
+                    load_act=visual_tokens * visual_tokens * batchsize * vision_num_heads * a_byte,
+                    store_act=visual_tokens * vision_head_size * batchsize * vision_num_heads * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+                self._analyze_to_results(
+                    "vision", "vision_softmax",
+                    OPs=v_softmax_OPs, load_weight=0,
+                    load_act=batchsize * vision_num_heads * visual_tokens * visual_tokens * a_byte,
+                    store_act=batchsize * vision_num_heads * visual_tokens * visual_tokens * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+
+            # 视觉归一化层
+            for name in self.module.get_vision_norm_layers(model_params):
+                norm_OPs = batchsize * vision_hidden_size * visual_tokens * 7
+                self._analyze_to_results(
+                    "vision", name, OPs=norm_OPs, load_weight=0,
+                    load_act=batchsize * vision_hidden_size * visual_tokens * a_byte,
+                    store_act=batchsize * vision_hidden_size * visual_tokens * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+
+            # 视觉残差连接
+            for name in ["vision_attn_add", "vision_mlp_add"]:
+                self._analyze_to_results(
+                    "vision", name,
+                    OPs=batchsize * vision_hidden_size * visual_tokens,
+                    load_weight=0,
+                    load_act=batchsize * vision_hidden_size * visual_tokens * a_byte,
+                    store_act=batchsize * vision_hidden_size * visual_tokens * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+
+            # 视觉激活函数
+            self._analyze_to_results(
+                "vision", "vision_mlp_act",
+                OPs=batchsize * vision_hidden_size * visual_tokens * 5,
+                load_weight=0,
+                load_act=batchsize * vision_hidden_size * visual_tokens * a_byte,
+                store_act=batchsize * vision_hidden_size * visual_tokens * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        # ===== 音频分支 =====
+        if audio_length is not None:
+            audio_hidden_size = self.module.get_audio_hidden_size(model_params)
+            audio_num_heads = self.module.get_audio_num_heads(model_params)
+            audio_intermediate_size = self.module.get_audio_intermediate_size(model_params)
+            audio_num_layers = self.module.get_audio_num_hidden_layers(model_params)
+
+            # 音频线性层
+            for name, (ic, oc) in self.module.get_audio_linear_layers(model_params, tp_size).items():
+                self._analyze_to_results(
+                    "audio", name,
+                    OPs=ic * oc * batchsize * audio_tokens * 2,
+                    load_weight=ic * oc * w_byte,
+                    load_act=ic * batchsize * audio_tokens * a_byte,
+                    store_act=oc * batchsize * audio_tokens * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+
+            # 音频注意力
+            audio_head_size = audio_hidden_size // audio_num_heads
+            a_qk_OPs = audio_tokens * audio_tokens * audio_head_size * audio_num_heads * batchsize * 2
+            a_sv_OPs = audio_tokens * audio_head_size * audio_tokens * audio_num_heads * batchsize * 2
+            a_softmax_OPs = batchsize * audio_num_heads * audio_tokens * audio_tokens * 5
+
+            if use_flashattention:
+                name = "audio_fused_attention"
+                bandwidth, max_OPS, onchip_buffer = get_hardware_info(self.hardware, w_bit, a_bit, kv_bit)
+                block_size_r = min(math.ceil(onchip_buffer / (a_byte * audio_head_size)), audio_head_size)
+                n_blocks_r = math.ceil(audio_tokens / block_size_r)
+                q_numel = audio_tokens * audio_head_size * batchsize * audio_num_heads * a_byte
+                kv_numel = audio_tokens * audio_head_size * batchsize * audio_num_heads * a_byte * 2
+                o_numel = audio_tokens * audio_tokens * batchsize * audio_num_heads * a_byte
+                self._analyze_to_results(
+                    "audio", name,
+                    OPs=a_qk_OPs + a_sv_OPs + a_softmax_OPs,
+                    load_weight=0, load_act=q_numel + kv_numel, store_act=o_numel * 2,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+            else:
+                self._analyze_to_results(
+                    "audio", "audio_qk_matmul",
+                    OPs=a_qk_OPs, load_weight=0,
+                    load_act=audio_tokens * audio_head_size * batchsize * audio_num_heads * a_byte,
+                    store_act=audio_tokens * audio_tokens * batchsize * audio_num_heads * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+                self._analyze_to_results(
+                    "audio", "audio_sv_matmul",
+                    OPs=a_sv_OPs, load_weight=0,
+                    load_act=audio_tokens * audio_tokens * batchsize * audio_num_heads * a_byte,
+                    store_act=audio_tokens * audio_head_size * batchsize * audio_num_heads * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+                self._analyze_to_results(
+                    "audio", "audio_softmax",
+                    OPs=a_softmax_OPs, load_weight=0,
+                    load_act=batchsize * audio_num_heads * audio_tokens * audio_tokens * a_byte,
+                    store_act=batchsize * audio_num_heads * audio_tokens * audio_tokens * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+
+            # 音频归一化层
+            for name in self.module.get_audio_norm_layers(model_params):
+                norm_OPs = batchsize * audio_hidden_size * audio_tokens * 7
+                self._analyze_to_results(
+                    "audio", name, OPs=norm_OPs, load_weight=0,
+                    load_act=batchsize * audio_hidden_size * audio_tokens * a_byte,
+                    store_act=batchsize * audio_hidden_size * audio_tokens * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+
+            # 音频残差连接
+            for name in ["audio_attn_add", "audio_mlp_add"]:
+                self._analyze_to_results(
+                    "audio", name,
+                    OPs=batchsize * audio_hidden_size * audio_tokens,
+                    load_weight=0,
+                    load_act=batchsize * audio_hidden_size * audio_tokens * a_byte,
+                    store_act=batchsize * audio_hidden_size * audio_tokens * a_byte,
+                    load_kv_cache=0, store_kv_cache=0,
+                )
+
+            # 音频激活函数
+            self._analyze_to_results(
+                "audio", "audio_mlp_act",
+                OPs=batchsize * audio_hidden_size * audio_tokens * 5,
+                load_weight=0,
+                load_act=batchsize * audio_hidden_size * audio_tokens * a_byte,
+                store_act=batchsize * audio_hidden_size * audio_tokens * a_byte,
+                load_kv_cache=0, store_kv_cache=0,
+            )
+
+        # ===== 总计 =====
+        total_results = {"decode": {}, "prefill": {}, "vision": {}, "audio": {}}
+        for data_name in ALL_DATA_NAMES:
+            total_results["decode"][data_name] = 0
+            total_results["prefill"][data_name] = 0
+            total_results["vision"][data_name] = 0
+            total_results["audio"][data_name] = 0
+
+        # 累加文本分支（乘以层数）
+        for stage in ["decode", "prefill"]:
+            for _, result in self.results[stage].items():
+                for data_name in ALL_DATA_NAMES:
+                    total_results[stage][data_name] += result[data_name] * num_hidden_layers
+
+        # 计算内存占用
+        weight_kv_footprint = total_results["prefill"]["load_weight"] + total_results["prefill"]["store_kv_cache"]
+        decode_tmp_act = sum(result["store_act"] for result in self.results["decode"].values())
+        total_results["decode"]["memory_consumption"] = decode_tmp_act + weight_kv_footprint
+        total_results["decode"]["memory_consumption_tmp_act"] = decode_tmp_act
+        total_results["decode"]["memory_consumption_weight"] = total_results["prefill"]["load_weight"]
+        total_results["decode"]["memory_consumption_kv_cache"] = total_results["prefill"]["store_kv_cache"]
+
+        prefill_tmp_act = sum(result["store_act"] for result in self.results["prefill"].values())
+        total_results["prefill"]["memory_consumption"] = prefill_tmp_act + weight_kv_footprint
+        total_results["prefill"]["memory_consumption_tmp_act"] = prefill_tmp_act
+        total_results["prefill"]["memory_consumption_weight"] = total_results["prefill"]["load_weight"]
+        total_results["prefill"]["memory_consumption_kv_cache"] = total_results["prefill"]["store_kv_cache"]
+
+        # lm_head
+        args = {"batchsize": batchsize, "seqlen": prefill_total_tokens, "a_byte": a_byte, "w_byte": w_byte}
+        for layer_info in self.module.post_process(model_params, args):
+            self._analyze_to_results(**layer_info)
+            for data_name in ALL_DATA_NAMES:
+                total_results[layer_info["stage"]][data_name] += self.results[layer_info["stage"]][layer_info["name"]][data_name]
+
+        # 视觉分支总计
+        if image_size is not None:
+            vision_repeat_layers = {
+                "vision_q_proj", "vision_k_proj", "vision_v_proj", "vision_out_proj",
+                "vision_gate_proj", "vision_up_proj", "vision_down_proj",
+                "vision_qk_matmul", "vision_sv_matmul", "vision_softmax",
+                "vision_norm1", "vision_norm2", "vision_attn_add", "vision_mlp_add",
+                "vision_mlp_act", "vision_fused_attention",
+            }
+            for name, result in self.results["vision"].items():
+                multiplier = vision_num_layers if name in vision_repeat_layers else 1
+                for data_name in ALL_DATA_NAMES:
+                    total_results["vision"][data_name] += result[data_name] * multiplier
+
+            # 视觉后处理（vision_proj）
+            vision_args = {"batchsize": batchsize, "seqlen": visual_tokens, "a_byte": a_byte, "w_byte": w_byte}
+            for layer_info in self.module.vision_post_process(model_params, vision_args):
+                self._analyze_to_results(**layer_info)
+                for data_name in ALL_DATA_NAMES:
+                    total_results[layer_info["stage"]][data_name] += self.results[layer_info["stage"]][layer_info["name"]][data_name]
+
+            # 视觉内存占用
+            vision_tmp_act = sum(
+                result["store_act"] * (vision_num_layers if name in vision_repeat_layers else 1)
+                for name, result in self.results["vision"].items()
+            )
+            vision_weight = total_results["vision"]["load_weight"]
+            total_results["vision"]["memory_consumption"] = vision_tmp_act + vision_weight
+            total_results["vision"]["memory_consumption_tmp_act"] = vision_tmp_act
+            total_results["vision"]["memory_consumption_weight"] = vision_weight
+            total_results["vision"]["memory_consumption_kv_cache"] = 0
+
+        # 音频分支总计
+        if audio_length is not None:
+            audio_repeat_layers = {
+                "audio_q_proj", "audio_k_proj", "audio_v_proj", "audio_out_proj",
+                "audio_fc1", "audio_fc2",
+                "audio_qk_matmul", "audio_sv_matmul", "audio_softmax",
+                "audio_attn_norm", "audio_mlp_norm", "audio_attn_add", "audio_mlp_add",
+                "audio_mlp_act", "audio_fused_attention",
+            }
+            for name, result in self.results["audio"].items():
+                multiplier = audio_num_layers if name in audio_repeat_layers else 1
+                for data_name in ALL_DATA_NAMES:
+                    total_results["audio"][data_name] += result[data_name] * multiplier
+
+            # 音频后处理（audio_proj）
+            audio_args = {"batchsize": batchsize, "seqlen": audio_tokens, "a_byte": a_byte, "w_byte": w_byte}
+            for layer_info in self.module.audio_post_process(model_params, audio_args):
+                self._analyze_to_results(**layer_info)
+                for data_name in ALL_DATA_NAMES:
+                    total_results[layer_info["stage"]][data_name] += self.results[layer_info["stage"]][layer_info["name"]][data_name]
+
+            # 音频内存占用
+            audio_tmp_act = sum(
+                result["store_act"] * (audio_num_layers if name in audio_repeat_layers else 1)
+                for name, result in self.results["audio"].items()
+            )
+            audio_weight = total_results["audio"]["load_weight"]
+            total_results["audio"]["memory_consumption"] = audio_tmp_act + audio_weight
+            total_results["audio"]["memory_consumption_tmp_act"] = audio_tmp_act
+            total_results["audio"]["memory_consumption_weight"] = audio_weight
+            total_results["audio"]["memory_consumption_kv_cache"] = 0
+
+        # 多模态总计
+        total_results["multimodal_ttft"] = {}
+        total_results["multimodal_tpot"] = {}
+        for data_name in ALL_DATA_NAMES:
+            # TTFT = Vision + Audio + Prefill
+            total_results["multimodal_ttft"][data_name] = (
+                total_results["vision"][data_name] +
+                total_results["audio"][data_name] +
+                total_results["prefill"][data_name]
+            )
+            # TPOT = Decode
+            total_results["multimodal_tpot"][data_name] = total_results["decode"][data_name]
+
+        # TTFT 内存占用
+        ttft_weight = (
+            total_results["vision"].get("memory_consumption_weight", 0) +
+            total_results["audio"].get("memory_consumption_weight", 0) +
+            total_results["prefill"]["memory_consumption_weight"]
+        )
+        ttft_tmp_act = max(
+            total_results["vision"].get("memory_consumption_tmp_act", 0),
+            total_results["audio"].get("memory_consumption_tmp_act", 0),
+            total_results["prefill"]["memory_consumption_tmp_act"],
+        )
+        ttft_kv = total_results["prefill"]["memory_consumption_kv_cache"]
+        total_results["multimodal_ttft"]["memory_consumption_weight"] = ttft_weight
+        total_results["multimodal_ttft"]["memory_consumption_tmp_act"] = ttft_tmp_act
+        total_results["multimodal_ttft"]["memory_consumption_kv_cache"] = ttft_kv
+        total_results["multimodal_ttft"]["memory_consumption"] = ttft_weight + ttft_tmp_act + ttft_kv
+
+        # TPOT 内存占用
+        total_results["multimodal_tpot"]["memory_consumption"] = total_results["decode"]["memory_consumption"]
+        total_results["multimodal_tpot"]["memory_consumption_weight"] = total_results["decode"]["memory_consumption_weight"]
+        total_results["multimodal_tpot"]["memory_consumption_tmp_act"] = total_results["decode"]["memory_consumption_tmp_act"]
+        total_results["multimodal_tpot"]["memory_consumption_kv_cache"] = total_results["decode"]["memory_consumption_kv_cache"]
+
+
+        self.results["total_results"] = total_results
+        return self.results
+
 
 class YOLOAnalyzer(ModelAnalyzer):
     def __init__(self, model_id, hardware, model_params=None):
