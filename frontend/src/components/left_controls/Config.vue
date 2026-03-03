@@ -31,14 +31,18 @@
         <input type="number" v-model.lazy="gen_length" min="1" max="4096">
     </div>
     <div class="config_div" v-if="is_multimodal && (inference_stage=='prefill' || inference_stage=='chat')">
-        Image Size:
-        <input type="number" v-model.lazy="image_width" min="1" max="8192">
-        <span> x </span>
-        <input type="number" v-model.lazy="image_height" min="1" max="8192">
+        <input type="checkbox" v-model="use_image" id="use_image">
+        <label for="use_image">Image Size:</label>
+        <template v-if="use_image">
+            <input type="number" v-model.lazy="image_width" min="1" max="8192">
+            <span> x </span>
+            <input type="number" v-model.lazy="image_height" min="1" max="8192">
+        </template>
     </div>
     <div class="config_div" v-if="is_omni && (inference_stage=='prefill' || inference_stage=='chat')">
-        Audio Length (s):
-        <input type="number" v-model.lazy="audio_length" min="0" max="3600" step="0.1">
+        <input type="checkbox" v-model="use_audio" id="use_audio">
+        <label for="use_audio">Audio Length (s):</label>
+        <input v-if="use_audio" type="number" v-model.lazy="audio_length" min="0.1" max="3600" step="0.1">
     </div>
     <div class="config_div">
         Tensor parallelism
@@ -128,8 +132,10 @@ const is_omni = computed(() => {
 const inference_stage = ref('decode');
 const batch_size = ref(1);
 const seq_length = ref(1024);
+const use_image = ref(true);
 const image_width = ref(1024);
 const image_height = ref(1024);
+const use_audio = ref(true);
 const audio_length = ref(5.0);
 const gen_length = ref(1);
 const tp_size = ref(1);
@@ -157,23 +163,33 @@ watch(seq_length, (n) => {
 })
 
 watch(image_width, (n) => {
-    global_inference_config.value.image_size = {
-        width: n,
-        height: image_height.value
+    if (use_image.value) {
+        global_inference_config.value.image_size = { width: n, height: image_height.value }
+        global_update_trigger.value += 1
     }
-    global_update_trigger.value += 1
 })
 
 watch(image_height, (n) => {
-    global_inference_config.value.image_size = {
-        width: image_width.value,
-        height: n
+    if (use_image.value) {
+        global_inference_config.value.image_size = { width: image_width.value, height: n }
+        global_update_trigger.value += 1
     }
+})
+
+watch(use_image, (n) => {
+    global_inference_config.value.image_size = n ? { width: image_width.value, height: image_height.value } : null
     global_update_trigger.value += 1
 })
 
 watch(audio_length, (n) => {
-    global_inference_config.value.audio_length = n
+    if (use_audio.value) {
+        global_inference_config.value.audio_length = n
+        global_update_trigger.value += 1
+    }
+})
+
+watch(use_audio, (n) => {
+    global_inference_config.value.audio_length = n ? audio_length.value : null
     global_update_trigger.value += 1
 })
 

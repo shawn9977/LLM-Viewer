@@ -169,15 +169,15 @@ def get_model_graph(model_id, hardware, inference_config):
                 root_target="vision_input",
             )
 
-        # 添加音频编码器
-        if has_audio and "audio" in result and result["audio"]:
+        # 添加音频编码器（无音频输入时节点 OPs 显示为 0）
+        if has_audio:
             if use_flashattention and hasattr(analyzer.module, "audio_flashattention_layer_graph"):
                 audio_layer_graph = analyzer.module.audio_flashattention_layer_graph
             else:
                 audio_layer_graph = analyzer.module.audio_layer_graph
             add_layer_graph(
                 audio_layer_graph,
-                result["audio"],
+                result.get("audio") or {},
                 prefix="audio::",
                 label_prefix="Audio:",
                 root_id="mm_audio_root",

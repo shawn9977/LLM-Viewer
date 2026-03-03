@@ -147,7 +147,7 @@ class ModelAnalyzer:
         bandwidth, max_OPS, _ = get_hardware_info(self.hardware, self.w_bit, self.a_bit, self.kv_bit)
         memory_access = load_weight + load_act + store_act + load_kv_cache + store_kv_cache
         arithmetic_intensity, performance, bound = roofline_analyze(bandwidth, max_OPS, OPs, memory_access)
-        inference_time = OPs / performance
+        inference_time = OPs / performance if performance > 0 else (memory_access / bandwidth if bandwidth > 0 else 0)
         self.results[stage][name] = {
             "OPs": OPs,
             "memory_access": memory_access,
@@ -1451,9 +1451,11 @@ class Qwen3OmniAnalyzer(ModelAnalyzer):
             visual_tokens = max(1, math.ceil(num_patches / max(1, spatial_merge_size) ** 2))
 
         # 计算音频 token 数
-        if audio_length is not None:
+        if audio_length is not None and audio_length > 0:
             # 根据 config: n_window=50, conv 下采样 8x
             audio_tokens = max(1, int(audio_length * 50 / 8))
+        else:
+            audio_length = None  # 统一为 None，后续 if audio_length is not None 可正确跳过
 
         # Prefill 阶段的总 token 数（包含所有模态）
         prefill_total_tokens = text_tokens + visual_tokens + audio_tokens
@@ -1887,7 +1889,7 @@ class Qwen3OmniAnalyzer(ModelAnalyzer):
         total_results["prefill"]["memory_consumption_weight"] = total_results["prefill"]["load_weight"]
         total_results["prefill"]["memory_consumption_kv_cache"] = total_results["prefill"]["store_kv_cache"]
 
-        # lm_head
+        # embed_tokens + lm_head（非重复层）
         args = {"batchsize": batchsize, "seqlen": prefill_total_tokens, "a_byte": a_byte, "w_byte": w_byte}
         for layer_info in self.module.post_process(model_params, args):
             self._analyze_to_results(**layer_info)
@@ -1898,6 +1900,7 @@ class Qwen3OmniAnalyzer(ModelAnalyzer):
         if image_size is not None:
             vision_repeat_layers = {
                 "vision_q_proj", "vision_k_proj", "vision_v_proj", "vision_out_proj",
+                "vision_fc1", "vision_fc2",
                 "vision_gate_proj", "vision_up_proj", "vision_down_proj",
                 "vision_qk_matmul", "vision_sv_matmul", "vision_softmax",
                 "vision_norm1", "vision_norm2", "vision_attn_add", "vision_mlp_add",

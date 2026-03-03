@@ -19,7 +19,7 @@ provide("total_results", total_results);
 provide("ip_port", ip_port);
 
 
-const global_inference_config = ref({ 
+const global_inference_config = ref({
   "stage": "decode",
   batch_size: 1,
   seq_length: 1024,
@@ -27,6 +27,7 @@ const global_inference_config = ref({
     width: 1024,
     height: 1024
   },
+  audio_length: 5.0,
   gen_length: 1,
   tp_size: 1,
   w_quant: "8-bit",
