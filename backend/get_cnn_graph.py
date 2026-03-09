@@ -55,10 +55,29 @@ def get_cnn_graph(model_id: str, hardware: str, cnn_config: dict):
     layer_graph   = analyzer.get_layer_graph()
     layer_results = result["layers"]
 
+    # ONNX 导出时无 bias 的 Conv 会被拆成 WithoutBiases + Conv 两个节点，
+    # 对用户无意义，过滤掉并把边透传给其父节点。
+    _HIDDEN_SUFFIXES = ("/WithoutBiases",)
+
+    def _is_hidden(n: str) -> bool:
+        return any(n.endswith(s) for s in _HIDDEN_SUFFIXES)
+
+    def _resolve(n: str) -> str:
+        """沿 DAG 向上跳过所有隐藏节点，返回第一个可见祖先。"""
+        while _is_hidden(n):
+            parents = layer_graph.get(n, [])
+            if not parents:
+                break
+            n = parents[0]
+        return n
+
     nodes = []
     edges = []
 
     for name, input_names in layer_graph.items():
+        if _is_hidden(name):
+            continue  # 跳过 WithoutBiases 节点
+
         if name in ("input", "output") or name not in layer_results:
             OPs = 0
             mem = 0
@@ -71,12 +90,14 @@ def get_cnn_graph(model_id: str, hardware: str, cnn_config: dict):
 
         nodes.append({
             "id":          name,
-            "label":       name.split("/")[-1] or name,  # 只显示最后一段，更简洁
+            "label":       name.split("/")[-1] or name,
             "description": f"OPs:{str_number(OPs)}, Access:{str_number(mem, 'B')}",
             "info":        info,
         })
         for src in input_names:
-            edges.append({"source": src, "target": name})
+            resolved = _resolve(src)
+            if resolved != name:  # 避免自环
+                edges.append({"source": resolved, "target": name})
 
     total_results = result["total_results"]
     return nodes, edges, total_results, hardware_info
