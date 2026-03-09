@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
+import { resolve } from 'path'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -19,5 +20,13 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        cnn: resolve(__dirname, 'cnn.html'),
+      }
+    }
   }
 })

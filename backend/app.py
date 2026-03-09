@@ -3,6 +3,8 @@ from flask_cors import CORS
 from get_model_graph import get_model_graph
 from model_params import get_available_models
 from hardwares import get_available_hardwares
+from get_cnn_graph import get_cnn_graph
+from cnn_analyzer import get_available_cnn_models
 import argparse
 import logging
 
@@ -35,6 +37,30 @@ def get_available():
     return {
         "available_hardwares": get_available_hardwares(),
         "available_model_ids": get_available_models(),
+    }
+
+
+@app.route("/get_cnn_graph", methods=["POST"])
+def get_cnn_graph_api():
+    cnn_config = request.json["cnn_config"]
+    nodes, edges, total_results, hardware_info = get_cnn_graph(
+        request.json["model_id"],
+        request.json["hardware"],
+        cnn_config,
+    )
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "total_results": total_results,
+        "hardware_info": hardware_info,
+    }
+
+
+@app.route("/get_available_cnn", methods=["GET"])
+def get_available_cnn():
+    return {
+        "available_hardwares": get_available_hardwares(),
+        "available_model_ids": get_available_cnn_models(),
     }
 
 if __name__ == "__main__":

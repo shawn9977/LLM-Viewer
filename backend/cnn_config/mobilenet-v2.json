@@ -1,0 +1,7825 @@
+{
+  "layers": [
+    {
+      "layer_type": "Subtract",
+      "layer_name": "Subtract_7752",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            3,
+            1,
+            1
+          ],
+          "numel": 3,
+          "size_bytes": 12
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            3,
+            3,
+            3
+          ],
+          "numel": 864,
+          "size_bytes": 3456
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            1,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            3,
+            3,
+            3
+          ],
+          "numel": 864,
+          "size_bytes": 3456
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0009,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(2xs2)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            3,
+            224,
+            224
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            3,
+            3,
+            3
+          ],
+          "numel": 864,
+          "size_bytes": 3456
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            112,
+            112
+          ],
+          "numel": 401408,
+          "size_bytes": 1605632
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add",
+      "gflops": 0.0004,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            112,
+            112
+          ],
+          "numel": 401408,
+          "size_bytes": 1605632
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            112,
+            112
+          ],
+          "numel": 401408,
+          "size_bytes": 1605632
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 288,
+          "size_bytes": 1152
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 288,
+          "size_bytes": 1152
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution",
+      "gflops": 0.0072,
+      "giops": 0.0,
+      "mparams": 0.0003,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            112,
+            112
+          ],
+          "numel": 401408,
+          "size_bytes": 1605632
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 288,
+          "size_bytes": 1152
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            112,
+            112
+          ],
+          "numel": 401408,
+          "size_bytes": 1605632
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_1",
+      "gflops": 0.0004,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            112,
+            112
+          ],
+          "numel": 401408,
+          "size_bytes": 1605632
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            112,
+            112
+          ],
+          "numel": 401408,
+          "size_bytes": 1605632
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_1/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            16,
+            32,
+            1,
+            1
+          ],
+          "numel": 512,
+          "size_bytes": 2048
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            16,
+            1,
+            1,
+            1
+          ],
+          "numel": 16,
+          "size_bytes": 64
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            16,
+            32,
+            1,
+            1
+          ],
+          "numel": 512,
+          "size_bytes": 2048
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_1",
+      "gflops": 0.0128,
+      "giops": 0.0,
+      "mparams": 0.0005,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            112,
+            112
+          ],
+          "numel": 401408,
+          "size_bytes": 1605632
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            16,
+            32,
+            1,
+            1
+          ],
+          "numel": 512,
+          "size_bytes": 2048
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            16,
+            112,
+            112
+          ],
+          "numel": 200704,
+          "size_bytes": 802816
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_2",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            16,
+            112,
+            112
+          ],
+          "numel": 200704,
+          "size_bytes": 802816
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            16,
+            1,
+            1
+          ],
+          "numel": 16,
+          "size_bytes": 64
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            16,
+            112,
+            112
+          ],
+          "numel": 200704,
+          "size_bytes": 802816
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_2/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            16,
+            1,
+            1
+          ],
+          "numel": 1536,
+          "size_bytes": 6144
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            1,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            16,
+            1,
+            1
+          ],
+          "numel": 1536,
+          "size_bytes": 6144
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_2",
+      "gflops": 0.0385,
+      "giops": 0.0,
+      "mparams": 0.0015,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            16,
+            112,
+            112
+          ],
+          "numel": 200704,
+          "size_bytes": 802816
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            16,
+            1,
+            1
+          ],
+          "numel": 1536,
+          "size_bytes": 6144
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            112,
+            112
+          ],
+          "numel": 1204224,
+          "size_bytes": 4816896
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_3",
+      "gflops": 0.0012,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            112,
+            112
+          ],
+          "numel": 1204224,
+          "size_bytes": 4816896
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            112,
+            112
+          ],
+          "numel": 1204224,
+          "size_bytes": 4816896
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_1/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 864,
+          "size_bytes": 3456
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 864,
+          "size_bytes": 3456
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_1",
+      "gflops": 0.0054,
+      "giops": 0.0,
+      "mparams": 0.0009,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(2xs2)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            112,
+            112
+          ],
+          "numel": 1204224,
+          "size_bytes": 4816896
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 864,
+          "size_bytes": 3456
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            56,
+            56
+          ],
+          "numel": 301056,
+          "size_bytes": 1204224
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_4",
+      "gflops": 0.0003,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            56,
+            56
+          ],
+          "numel": 301056,
+          "size_bytes": 1204224
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            56,
+            56
+          ],
+          "numel": 301056,
+          "size_bytes": 1204224
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_3/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            24,
+            96,
+            1,
+            1
+          ],
+          "numel": 2304,
+          "size_bytes": 9216
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            24,
+            1,
+            1,
+            1
+          ],
+          "numel": 24,
+          "size_bytes": 96
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            24,
+            96,
+            1,
+            1
+          ],
+          "numel": 2304,
+          "size_bytes": 9216
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_3",
+      "gflops": 0.0145,
+      "giops": 0.0,
+      "mparams": 0.0023,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            56,
+            56
+          ],
+          "numel": 301056,
+          "size_bytes": 1204224
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            24,
+            96,
+            1,
+            1
+          ],
+          "numel": 2304,
+          "size_bytes": 9216
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            56,
+            56
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_5",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            56,
+            56
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            1,
+            1
+          ],
+          "numel": 24,
+          "size_bytes": 96
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            56,
+            56
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_4/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            24,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            1
+          ],
+          "numel": 144,
+          "size_bytes": 576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            24,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_4",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0035,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            56,
+            56
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            24,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_6",
+      "gflops": 0.0005,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            1,
+            1
+          ],
+          "numel": 144,
+          "size_bytes": 576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_2/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1296,
+          "size_bytes": 5184
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 144,
+          "size_bytes": 576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1296,
+          "size_bytes": 5184
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_2",
+      "gflops": 0.0081,
+      "giops": 0.0,
+      "mparams": 0.0013,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1296,
+          "size_bytes": 5184
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_7",
+      "gflops": 0.0005,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            1,
+            1
+          ],
+          "numel": 144,
+          "size_bytes": 576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_5/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            24,
+            144,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            24,
+            1,
+            1,
+            1
+          ],
+          "numel": 24,
+          "size_bytes": 96
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            24,
+            144,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_5",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0035,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            24,
+            144,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            56,
+            56
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_8",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            56,
+            56
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            1,
+            1
+          ],
+          "numel": 24,
+          "size_bytes": 96
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            56,
+            56
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_6/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            24,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            1
+          ],
+          "numel": 144,
+          "size_bytes": 576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            24,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_6",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0035,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            24,
+            56,
+            56
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            24,
+            1,
+            1
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_9",
+      "gflops": 0.0005,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            1,
+            1
+          ],
+          "numel": 144,
+          "size_bytes": 576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_3/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1296,
+          "size_bytes": 5184
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 144,
+          "size_bytes": 576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1296,
+          "size_bytes": 5184
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_3",
+      "gflops": 0.002,
+      "giops": 0.0,
+      "mparams": 0.0013,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(2xs2)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            56,
+            56
+          ],
+          "numel": 451584,
+          "size_bytes": 1806336
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            144,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1296,
+          "size_bytes": 5184
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            28,
+            28
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_10",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            28,
+            28
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            1,
+            1
+          ],
+          "numel": 144,
+          "size_bytes": 576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            28,
+            28
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_7/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            144,
+            1,
+            1
+          ],
+          "numel": 4608,
+          "size_bytes": 18432
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            1,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            144,
+            1,
+            1
+          ],
+          "numel": 4608,
+          "size_bytes": 18432
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_7",
+      "gflops": 0.0072,
+      "giops": 0.0,
+      "mparams": 0.0046,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            144,
+            28,
+            28
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            144,
+            1,
+            1
+          ],
+          "numel": 4608,
+          "size_bytes": 18432
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_11",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_8/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_8",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0061,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_12",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_4/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_4",
+      "gflops": 0.0027,
+      "giops": 0.0,
+      "mparams": 0.0017,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_13",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_9/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            192,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            1,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            192,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_9",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0061,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            192,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_14",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_10/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_10",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0061,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_15",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_5/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_5",
+      "gflops": 0.0027,
+      "giops": 0.0,
+      "mparams": 0.0017,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_16",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_11/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            192,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            1,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            192,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_11",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0061,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            32,
+            192,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_17",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            1,
+            1
+          ],
+          "numel": 32,
+          "size_bytes": 128
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_12/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_12",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0061,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            32,
+            28,
+            28
+          ],
+          "numel": 25088,
+          "size_bytes": 100352
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            32,
+            1,
+            1
+          ],
+          "numel": 6144,
+          "size_bytes": 24576
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_18",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_6/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_6",
+      "gflops": 0.0007,
+      "giops": 0.0,
+      "mparams": 0.0017,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(2xs2)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            28,
+            28
+          ],
+          "numel": 150528,
+          "size_bytes": 602112
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            192,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 1728,
+          "size_bytes": 6912
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            14,
+            14
+          ],
+          "numel": 37632,
+          "size_bytes": 150528
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_19",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            14,
+            14
+          ],
+          "numel": 37632,
+          "size_bytes": 150528
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            1,
+            1
+          ],
+          "numel": 192,
+          "size_bytes": 768
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            14,
+            14
+          ],
+          "numel": 37632,
+          "size_bytes": 150528
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_13/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            192,
+            1,
+            1
+          ],
+          "numel": 12288,
+          "size_bytes": 49152
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            1,
+            1,
+            1
+          ],
+          "numel": 64,
+          "size_bytes": 256
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            192,
+            1,
+            1
+          ],
+          "numel": 12288,
+          "size_bytes": 49152
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_13",
+      "gflops": 0.0048,
+      "giops": 0.0,
+      "mparams": 0.0123,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            192,
+            14,
+            14
+          ],
+          "numel": 37632,
+          "size_bytes": 150528
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            192,
+            1,
+            1
+          ],
+          "numel": 12288,
+          "size_bytes": 49152
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_20",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            1,
+            1
+          ],
+          "numel": 64,
+          "size_bytes": 256
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_14/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_14",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0246,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_21",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_7/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_7",
+      "gflops": 0.0014,
+      "giops": 0.0,
+      "mparams": 0.0035,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_22",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_15/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            1,
+            1,
+            1
+          ],
+          "numel": 64,
+          "size_bytes": 256
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_15",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0246,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_23",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            1,
+            1
+          ],
+          "numel": 64,
+          "size_bytes": 256
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_16/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_16",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0246,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_24",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_8/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_8",
+      "gflops": 0.0014,
+      "giops": 0.0,
+      "mparams": 0.0035,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_25",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_17/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            1,
+            1,
+            1
+          ],
+          "numel": 64,
+          "size_bytes": 256
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_17",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0246,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_26",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            1,
+            1
+          ],
+          "numel": 64,
+          "size_bytes": 256
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_18/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_18",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0246,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_27",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_9/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_9",
+      "gflops": 0.0014,
+      "giops": 0.0,
+      "mparams": 0.0035,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_28",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_19/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            1,
+            1,
+            1
+          ],
+          "numel": 64,
+          "size_bytes": 256
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_19",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0246,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            64,
+            384,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_29",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            1,
+            1
+          ],
+          "numel": 64,
+          "size_bytes": 256
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_20/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_20",
+      "gflops": 0.0096,
+      "giops": 0.0,
+      "mparams": 0.0246,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            64,
+            14,
+            14
+          ],
+          "numel": 12544,
+          "size_bytes": 50176
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            64,
+            1,
+            1
+          ],
+          "numel": 24576,
+          "size_bytes": 98304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_30",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_10/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_10",
+      "gflops": 0.0014,
+      "giops": 0.0,
+      "mparams": 0.0035,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            384,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 3456,
+          "size_bytes": 13824
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_31",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0004,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            1,
+            1
+          ],
+          "numel": 384,
+          "size_bytes": 1536
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_21/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            384,
+            1,
+            1
+          ],
+          "numel": 36864,
+          "size_bytes": 147456
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            1,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            384,
+            1,
+            1
+          ],
+          "numel": 36864,
+          "size_bytes": 147456
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_21",
+      "gflops": 0.0145,
+      "giops": 0.0,
+      "mparams": 0.0369,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            384,
+            14,
+            14
+          ],
+          "numel": 75264,
+          "size_bytes": 301056
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            384,
+            1,
+            1
+          ],
+          "numel": 36864,
+          "size_bytes": 147456
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_32",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_22/fq_weights_1",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_22",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0553,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_33",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_11/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_11",
+      "gflops": 0.002,
+      "giops": 0.0,
+      "mparams": 0.0052,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_34",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_23/fq_weights_1",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            576,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            1,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            576,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_23",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0553,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            576,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_35",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_24/fq_weights_1",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_24",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0553,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_36",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_12/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_12",
+      "gflops": 0.002,
+      "giops": 0.0,
+      "mparams": 0.0052,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_37",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_25/fq_weights_1",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            576,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            1,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            576,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_25",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0553,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            96,
+            576,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_38",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            1,
+            1
+          ],
+          "numel": 96,
+          "size_bytes": 384
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_26/fq_weights_1",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_26",
+      "gflops": 0.0217,
+      "giops": 0.0,
+      "mparams": 0.0553,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            96,
+            14,
+            14
+          ],
+          "numel": 18816,
+          "size_bytes": 75264
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            96,
+            1,
+            1
+          ],
+          "numel": 55296,
+          "size_bytes": 221184
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_39",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_13/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_13",
+      "gflops": 0.0005,
+      "giops": 0.0,
+      "mparams": 0.0052,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(2xs2)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            14,
+            14
+          ],
+          "numel": 112896,
+          "size_bytes": 451584
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            576,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 5184,
+          "size_bytes": 20736
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            7,
+            7
+          ],
+          "numel": 28224,
+          "size_bytes": 112896
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_40",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0006,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            7,
+            7
+          ],
+          "numel": 28224,
+          "size_bytes": 112896
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            1,
+            1
+          ],
+          "numel": 576,
+          "size_bytes": 2304
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            7,
+            7
+          ],
+          "numel": 28224,
+          "size_bytes": 112896
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_27/fq_weights_1",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            576,
+            1,
+            1
+          ],
+          "numel": 92160,
+          "size_bytes": 368640
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            1,
+            1,
+            1
+          ],
+          "numel": 160,
+          "size_bytes": 640
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            576,
+            1,
+            1
+          ],
+          "numel": 92160,
+          "size_bytes": 368640
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_27",
+      "gflops": 0.009,
+      "giops": 0.0,
+      "mparams": 0.0922,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            576,
+            7,
+            7
+          ],
+          "numel": 28224,
+          "size_bytes": 112896
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            576,
+            1,
+            1
+          ],
+          "numel": 92160,
+          "size_bytes": 368640
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_41",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            1,
+            1
+          ],
+          "numel": 160,
+          "size_bytes": 640
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_28/fq_weights_1",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_28",
+      "gflops": 0.0151,
+      "giops": 0.0,
+      "mparams": 0.1536,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_42",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_14/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_14",
+      "gflops": 0.0008,
+      "giops": 0.0,
+      "mparams": 0.0086,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_43",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_29/fq_weights_1",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            960,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            1,
+            1,
+            1
+          ],
+          "numel": 160,
+          "size_bytes": 640
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            960,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_29",
+      "gflops": 0.0151,
+      "giops": 0.0,
+      "mparams": 0.1536,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            960,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_44",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            1,
+            1
+          ],
+          "numel": 160,
+          "size_bytes": 640
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_30/fq_weights_1",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_30",
+      "gflops": 0.0151,
+      "giops": 0.0,
+      "mparams": 0.1536,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_45",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_15/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_15",
+      "gflops": 0.0008,
+      "giops": 0.0,
+      "mparams": 0.0086,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_46",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_31/fq_weights_1",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            960,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            1,
+            1,
+            1
+          ],
+          "numel": 160,
+          "size_bytes": 640
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            960,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_31",
+      "gflops": 0.0151,
+      "giops": 0.0,
+      "mparams": 0.1536,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            160,
+            960,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_47",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0002,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            1,
+            1
+          ],
+          "numel": 160,
+          "size_bytes": 640
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_32/fq_weights_1",
+      "gflops": 0.0002,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_32",
+      "gflops": 0.0151,
+      "giops": 0.0,
+      "mparams": 0.1536,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            160,
+            7,
+            7
+          ],
+          "numel": 7840,
+          "size_bytes": 31360
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            160,
+            1,
+            1
+          ],
+          "numel": 153600,
+          "size_bytes": 614400
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_48",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/GroupConvolution_16/fq_weights_1",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        }
+      ]
+    },
+    {
+      "layer_type": "GroupConvolution",
+      "layer_name": "aten::conv2d/GroupConvolution_16",
+      "gflops": 0.0008,
+      "giops": 0.0,
+      "mparams": 0.0086,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(1xs1)",
+        "pads_end": "(1xs1)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            960,
+            1,
+            1,
+            3,
+            3
+          ],
+          "numel": 8640,
+          "size_bytes": 34560
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_49",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            1,
+            1
+          ],
+          "numel": 960,
+          "size_bytes": 3840
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_33/fq_weights_1",
+      "gflops": 0.0003,
+      "giops": 0.0,
+      "mparams": 0.0003,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            320,
+            960,
+            1,
+            1
+          ],
+          "numel": 307200,
+          "size_bytes": 1228800
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            320,
+            1,
+            1,
+            1
+          ],
+          "numel": 320,
+          "size_bytes": 1280
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            320,
+            960,
+            1,
+            1
+          ],
+          "numel": 307200,
+          "size_bytes": 1228800
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_33",
+      "gflops": 0.0301,
+      "giops": 0.0,
+      "mparams": 0.3072,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            960,
+            7,
+            7
+          ],
+          "numel": 47040,
+          "size_bytes": 188160
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            320,
+            960,
+            1,
+            1
+          ],
+          "numel": 307200,
+          "size_bytes": 1228800
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            320,
+            7,
+            7
+          ],
+          "numel": 15680,
+          "size_bytes": 62720
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_50",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.0003,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            320,
+            7,
+            7
+          ],
+          "numel": 15680,
+          "size_bytes": 62720
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            320,
+            1,
+            1
+          ],
+          "numel": 320,
+          "size_bytes": 1280
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            320,
+            7,
+            7
+          ],
+          "numel": 15680,
+          "size_bytes": 62720
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::conv2d/Convolution_34/fq_weights_1",
+      "gflops": 0.0004,
+      "giops": 0.0,
+      "mparams": 0.0013,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1280,
+            320,
+            1,
+            1
+          ],
+          "numel": 409600,
+          "size_bytes": 1638400
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1280,
+            1,
+            1,
+            1
+          ],
+          "numel": 1280,
+          "size_bytes": 5120
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1280,
+            320,
+            1,
+            1
+          ],
+          "numel": 409600,
+          "size_bytes": 1638400
+        }
+      ]
+    },
+    {
+      "layer_type": "Convolution",
+      "layer_name": "aten::conv2d/Convolution_34",
+      "gflops": 0.0401,
+      "giops": 0.0,
+      "mparams": 0.4096,
+      "layer_params": {
+        "auto_pad": "explicit",
+        "dilations": "(1xs1)",
+        "pads_begin": "(0xs0)",
+        "pads_end": "(0xs0)",
+        "strides": "(1xs1)"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            320,
+            7,
+            7
+          ],
+          "numel": 15680,
+          "size_bytes": 62720
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1280,
+            320,
+            1,
+            1
+          ],
+          "numel": 409600,
+          "size_bytes": 1638400
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1280,
+            7,
+            7
+          ],
+          "numel": 62720,
+          "size_bytes": 250880
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::conv2d/Add_51",
+      "gflops": 0.0001,
+      "giops": 0.0,
+      "mparams": 0.0013,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1280,
+            7,
+            7
+          ],
+          "numel": 62720,
+          "size_bytes": 250880
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1280,
+            1,
+            1
+          ],
+          "numel": 1280,
+          "size_bytes": 5120
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1280,
+            7,
+            7
+          ],
+          "numel": 62720,
+          "size_bytes": 250880
+        }
+      ]
+    },
+    {
+      "layer_type": "ReduceMean",
+      "layer_name": "aten::adaptive_avg_pool2d/AdaptiveAvgPool",
+      "gflops": null,
+      "giops": null,
+      "mparams": 0.0,
+      "layer_params": {},
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1280,
+            7,
+            7
+          ],
+          "numel": 62720,
+          "size_bytes": 250880
+        },
+        {
+          "dtype": "i64",
+          "shape": [
+            2
+          ],
+          "numel": 2,
+          "size_bytes": 16
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1280,
+            1,
+            1
+          ],
+          "numel": 1280,
+          "size_bytes": 5120
+        }
+      ]
+    },
+    {
+      "layer_type": "Multiply",
+      "layer_name": "aten::linear/MatMul/fq_weights_1",
+      "gflops": 0.0013,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1000,
+            1280
+          ],
+          "numel": 1280000,
+          "size_bytes": 5120000
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1000,
+            1
+          ],
+          "numel": 1000,
+          "size_bytes": 4000
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1000,
+            1280
+          ],
+          "numel": 1280000,
+          "size_bytes": 5120000
+        }
+      ]
+    },
+    {
+      "layer_type": "MatMul",
+      "layer_name": "aten::linear/MatMul",
+      "gflops": 0.0026,
+      "giops": 0.0,
+      "mparams": 1.28,
+      "layer_params": {
+        "transpose_a": "False",
+        "transpose_b": "True"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1280
+          ],
+          "numel": 1280,
+          "size_bytes": 5120
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1000,
+            1280
+          ],
+          "numel": 1280000,
+          "size_bytes": 5120000
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1000
+          ],
+          "numel": 1000,
+          "size_bytes": 4000
+        }
+      ]
+    },
+    {
+      "layer_type": "Add",
+      "layer_name": "aten::linear/Add",
+      "gflops": 0.0,
+      "giops": 0.0,
+      "mparams": 0.001,
+      "layer_params": {
+        "auto_broadcast": "numpy"
+      },
+      "input_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1000
+          ],
+          "numel": 1000,
+          "size_bytes": 4000
+        },
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1000
+          ],
+          "numel": 1000,
+          "size_bytes": 4000
+        }
+      ],
+      "output_tensors": [
+        {
+          "dtype": "f32",
+          "shape": [
+            1,
+            1000
+          ],
+          "numel": 1000,
+          "size_bytes": 4000
+        }
+      ]
+    }
+  ]
+}
