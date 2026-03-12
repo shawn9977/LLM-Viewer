@@ -1153,8 +1153,9 @@ class VLMAnalyzer(ModelAnalyzer):
 
         # 解析图像尺寸并获取视觉编码器参数
         image_w, image_h = _parse_image_size(image_size)
-        patch_size = self.module.get_vision_patch_size(model_params)  # 图像块大小（如 14x14）
+        patch_size = self.module.get_vision_patch_size(model_params)  # 图像块大小（如 16x16）
         spatial_merge_size = self.module.get_vision_spatial_merge_size(model_params)  # 空间合并大小
+        temporal_patch_size = self.module.get_vision_temporal_patch_size(model_params)  # 时间维度合并大小
         in_channels = self.module.get_vision_in_channels(model_params)  # 输入通道数（通常为 3，RGB）
         vision_hidden_size = self.module.get_vision_hidden_size(model_params)  # 视觉编码器隐藏层大小
         vision_num_heads = self.module.get_vision_num_heads(model_params)  # 视觉编码器注意力头数量
@@ -1168,7 +1169,8 @@ class VLMAnalyzer(ModelAnalyzer):
         merged_tokens = max(1, math.ceil(num_patches / max(1, spatial_merge_size) ** 2))  # 空间合并后的 token 数量
 
         # 分析图像块嵌入层（Patch Embedding）
-        patch_ic = in_channels * patch_size * patch_size  # 输入通道数（如 3*14*14=588）
+        # Conv3d kernel: (temporal_patch_size, patch_size, patch_size)
+        patch_ic = in_channels * temporal_patch_size * patch_size * patch_size  # e.g. 3*2*16*16=1536
         patch_oc = vision_hidden_size  # 输出通道数
         self._analyze_to_results(
             "vision",
@@ -1279,14 +1281,14 @@ class VLMAnalyzer(ModelAnalyzer):
                 store_kv_cache=0,
             )
 
-        # 分析视觉编码器的 MLP 激活函数
+        # 分析视觉编码器的 MLP 激活函数（GELUTanh，作用在 fc1 输出上，维度为 intermediate_size）
         self._analyze_to_results(
             "vision",
             "vision_mlp_act",
-            OPs=batchsize * vision_hidden_size * merged_tokens * 5,
+            OPs=batchsize * vision_intermediate_size * merged_tokens * 5,
             load_weight=0,
-            load_act=batchsize * vision_hidden_size * merged_tokens * a_byte,
-            store_act=batchsize * vision_hidden_size * merged_tokens * a_byte,
+            load_act=batchsize * vision_intermediate_size * merged_tokens * a_byte,
+            store_act=batchsize * vision_intermediate_size * merged_tokens * a_byte,
             load_kv_cache=0,
             store_kv_cache=0,
         )
@@ -1297,7 +1299,6 @@ class VLMAnalyzer(ModelAnalyzer):
             "vision_k_proj",
             "vision_v_proj",
             "vision_out_proj",
-            "vision_gate_proj",
             "vision_up_proj",
             "vision_down_proj",
             "vision_qk_matmul",

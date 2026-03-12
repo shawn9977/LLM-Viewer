@@ -141,30 +141,72 @@ def get_vision_linear_layers(model_params, tp_size: int):
 	if tp_size > 1:
 		assert hidden_size % tp_size == 0
 		assert intermediate_size % tp_size == 0
+	# Vision MLP uses standard fc1+GELU+fc2 (NOT SwiGLU), so no gate_proj
 	return {
 		"vision_q_proj": [hidden_size, attention_heads * head_dim // tp_size],
 		"vision_k_proj": [hidden_size, attention_heads * head_dim // tp_size],
 		"vision_v_proj": [hidden_size, attention_heads * head_dim // tp_size],
 		"vision_out_proj": [attention_heads * head_dim // tp_size, hidden_size],
-		"vision_gate_proj": [hidden_size, intermediate_size // tp_size],
 		"vision_up_proj": [hidden_size, intermediate_size // tp_size],
 		"vision_down_proj": [intermediate_size // tp_size, hidden_size],
 	}
 
 
 def vision_post_process(model_params, args):
-	out_hidden_size = get_vision_out_hidden_size(model_params)
-	hidden_size = get_vision_hidden_size(model_params)
+	vision_config = _vision_config(model_params)
+	hidden_size = vision_config["hidden_size"]
+	out_hidden_size = vision_config.get("out_hidden_size")
+	spatial_merge_size = vision_config.get("spatial_merge_size", 1)
 	if out_hidden_size is None:
 		return []
-	return [{
-		"name": "vision_proj",
-		"stage": "vision",
-		"OPs": args["batchsize"] * args["seqlen"] * hidden_size * out_hidden_size * 2,
-		"load_weight": hidden_size * out_hidden_size * args["w_byte"],
-		"load_act": args["batchsize"] * args["seqlen"] * hidden_size * args["a_byte"],
-		"store_act": args["batchsize"] * args["seqlen"] * out_hidden_size * args["a_byte"],
-	}]
+
+	# merger input dim = spatial_merge_size^2 * hidden_size (e.g. 4 * 1152 = 4608)
+	merger_input_size = (spatial_merge_size ** 2) * hidden_size
+
+	# 1 main merger + len(deepstack_visual_indexes) deepstack mergers
+	deepstack_indexes = vision_config.get("deepstack_visual_indexes", [])
+	num_mergers = 1 + len(deepstack_indexes)
+
+	layers = []
+	for i in range(num_mergers):
+		prefix = f"vision_merger_{i}_" if i > 0 else "vision_merger_"
+		# LayerNorm(merger_input_size): 7 ops per element
+		layers.append({
+			"name": f"{prefix}ln_q",
+			"stage": "vision",
+			"OPs": args["batchsize"] * args["seqlen"] * merger_input_size * 7,
+			"load_weight": merger_input_size * args["w_byte"],
+			"load_act": args["batchsize"] * args["seqlen"] * merger_input_size * args["a_byte"],
+			"store_act": args["batchsize"] * args["seqlen"] * merger_input_size * args["a_byte"],
+		})
+		# fc1: Linear(merger_input_size -> merger_input_size)
+		layers.append({
+			"name": f"{prefix}fc1",
+			"stage": "vision",
+			"OPs": args["batchsize"] * args["seqlen"] * merger_input_size * merger_input_size * 2,
+			"load_weight": merger_input_size * merger_input_size * args["w_byte"],
+			"load_act": args["batchsize"] * args["seqlen"] * merger_input_size * args["a_byte"],
+			"store_act": args["batchsize"] * args["seqlen"] * merger_input_size * args["a_byte"],
+		})
+		# GELU activation: 5 ops per element
+		layers.append({
+			"name": f"{prefix}act",
+			"stage": "vision",
+			"OPs": args["batchsize"] * args["seqlen"] * merger_input_size * 5,
+			"load_weight": 0,
+			"load_act": args["batchsize"] * args["seqlen"] * merger_input_size * args["a_byte"],
+			"store_act": args["batchsize"] * args["seqlen"] * merger_input_size * args["a_byte"],
+		})
+		# fc2: Linear(merger_input_size -> out_hidden_size)
+		layers.append({
+			"name": f"{prefix}fc2",
+			"stage": "vision",
+			"OPs": args["batchsize"] * args["seqlen"] * merger_input_size * out_hidden_size * 2,
+			"load_weight": merger_input_size * out_hidden_size * args["w_byte"],
+			"load_act": args["batchsize"] * args["seqlen"] * merger_input_size * args["a_byte"],
+			"store_act": args["batchsize"] * args["seqlen"] * out_hidden_size * args["a_byte"],
+		})
+	return layers
 
 
 # ===== Layer graphs =====
@@ -219,9 +261,8 @@ vision_layer_graph = {
 	"vision_out_proj": ["vision_sv_matmul"],
 	"vision_attn_add": ["vision_patch_embed", "vision_out_proj"],
 	"vision_norm2": ["vision_attn_add"],
-	"vision_gate_proj": ["vision_norm2"],
 	"vision_up_proj": ["vision_norm2"],
-	"vision_mlp_act": ["vision_up_proj", "vision_gate_proj"],
+	"vision_mlp_act": ["vision_up_proj"],
 	"vision_down_proj": ["vision_mlp_act"],
 	"vision_mlp_add": ["vision_attn_add", "vision_down_proj"],
 	"vision_proj": ["vision_mlp_add"],
@@ -239,9 +280,8 @@ vision_flashattention_layer_graph = {
 	"vision_out_proj": ["vision_fused_attention"],
 	"vision_attn_add": ["vision_patch_embed", "vision_out_proj"],
 	"vision_norm2": ["vision_attn_add"],
-	"vision_gate_proj": ["vision_norm2"],
 	"vision_up_proj": ["vision_norm2"],
-	"vision_mlp_act": ["vision_up_proj", "vision_gate_proj"],
+	"vision_mlp_act": ["vision_up_proj"],
 	"vision_down_proj": ["vision_mlp_act"],
 	"vision_mlp_add": ["vision_attn_add", "vision_down_proj"],
 	"vision_proj": ["vision_mlp_add"],
