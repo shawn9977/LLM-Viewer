@@ -317,10 +317,10 @@ $$
 
 ### 2.1 LayerNorm（归一化层）
 
-每个 merger 的第一步，对 $H_{merger}$ 维向量做 LayerNorm。
+4 个 merger 的 LayerNorm 在代码中统一使用 $H_{merger}$ 计算（`merger_input_size`）：
 
 $$
-OPs_{ln\_q} = B \times N_m \times H_{merger} \times 7
+OPs_{ln} = B \times N_m \times H_{merger} \times 7
 $$
 
 | 指标 | 公式 | 说明 |
@@ -330,14 +330,16 @@ $$
 | **激活加载** | $B \cdot N_m \cdot H_{merger} \cdot a_{byte}$ | 输入激活 |
 | **激活存储** | $B \cdot N_m \cdot H_{merger} \cdot a_{byte}$ | 归一化后激活 |
 
-**公式解释**：LayerNorm 对每个 token 的向量计算均值和方差，再做归一化和仿射变换，共 7 步基本操作。两种 merger 的 norm 输入维度不同：主 merger 的 norm 在 concat 之前，输入维度为 $H_v=1152$；deepstack mergers 的 norm 在 concat 之后，输入维度为 $H_{merger}=4608$。代码中统一使用 `merger_input_size`（即 $H_{merger}$）计算，对主 merger 是保守估计。
+**公式解释**：从模型架构上，主 merger 的 LayerNorm 作用在 concat 之前（维度 $H_v=1152$），deepstack mergers 的 LayerNorm 作用在 concat 之后（维度 $H_{merger}=4608$）。但代码实现中对所有 merger 统一使用 `merger_input_size`（即 $H_{merger}$）计算，对主 merger 是保守估计（高估了 $S_m^2=4$ 倍）。
+
+> 代码位置：[backend/models/qwen3_vl.py:174-181](backend/models/qwen3_vl.py#L174)
 
 ---
 
 ### 2.2 fc1（第一个线性层）
 
 $$
-OPs_{fc1} = B \times N_m \times H_{merger} \times H_{merger} \times 2
+OPs_{fc1} = B \times N_m \times H_{merger}^2 \times 2
 $$
 
 | 指标 | 公式 | 说明 |
@@ -347,7 +349,9 @@ $$
 | **激活加载** | $B \cdot N_m \cdot H_{merger} \cdot a_{byte}$ | LayerNorm 输出 |
 | **激活存储** | $B \cdot N_m \cdot H_{merger} \cdot a_{byte}$ | fc1 输出 |
 
-**公式解释**：`Linear(4608, 4608)` 是一个方阵投影，计算量为 $H_{merger}^2 \times 2 \times B \times N_m$。权重矩阵 $4608^2 \approx 21M$ 参数，是 merger 中最大的权重。
+**公式解释**：`Linear(4608, 4608)` 是一个方阵投影，权重矩阵 $4608^2 \approx 21M$ 参数，是 merger 中最大的权重。
+
+> 代码位置：[backend/models/qwen3_vl.py:183-190](backend/models/qwen3_vl.py#L183)
 
 ---
 
@@ -364,7 +368,9 @@ $$
 | **激活加载** | $B \cdot N_m \cdot H_{merger} \cdot a_{byte}$ | fc1 输出 |
 | **激活存储** | $B \cdot N_m \cdot H_{merger} \cdot a_{byte}$ | GELU 激活后结果 |
 
-**公式解释**：GELU 激活函数 $\text{GELU}(x) = x \cdot \Phi(x)$，其中 $\Phi$ 为标准正态分布 CDF，实际使用 tanh 近似，约需 5 步基本操作。
+**公式解释**：GELU 激活函数 $\text{GELU}(x) = x \cdot \Phi(x)$，实际使用 tanh 近似，约需 5 步基本操作。
+
+> 代码位置：[backend/models/qwen3_vl.py:192-199](backend/models/qwen3_vl.py#L192)
 
 ---
 
@@ -383,12 +389,16 @@ $$
 
 **公式解释**：`Linear(4608, 4096)` 将 merger 特征投影到 LLM 的隐藏维度，输出的 $N_m$ 个视觉 token 会被拼接到文本 token 序列中，作为 LLM prefill 阶段的输入。
 
+> 代码位置：[backend/models/qwen3_vl.py:201-208](backend/models/qwen3_vl.py#L201)
+
 ---
 
 ### 2.5 单个 Merger 总计算量
 
+代码中 4 个 merger 使用相同公式（统一以 $H_{merger}$ 计算 LayerNorm）：
+
 $$
-OPs_{merger} = OPs_{ln\_q} + OPs_{fc1} + OPs_{act} + OPs_{fc2}
+OPs_{merger} = OPs_{ln} + OPs_{fc1} + OPs_{act} + OPs_{fc2}
 $$
 
 $$
@@ -398,18 +408,24 @@ $$
 以 Qwen3-VL-8B 参数代入（$H_{merger}=4608$，$H_{out,v}=4096$）：
 
 $$
-= B \cdot N_m \cdot 4608 \cdot (7 + 9216 + 5 + 8192) \approx B \cdot N_m \cdot 4608 \times 17420
+= B \cdot N_m \cdot 4608 \times (7 + 9216 + 5 + 8192) \approx B \cdot N_m \times 80{,}254{,}464
 $$
+
+其中各项占比：LayerNorm（$\times 7$）$\approx 0.04\%$，fc1（$\times 9216$）$\approx 52.9\%$，GELU（$\times 5$）$\approx 0.03\%$，fc2（$\times 8192$）$\approx 47.0\%$。**fc1 和 fc2 主导计算量。**
 
 ---
 
 ### 2.6 全部 Merger 总计算量
 
 $$
-OPs_{all\_mergers} = N_{merger} \times OPs_{merger} = 4 \times OPs_{merger}
+OPs_{all} = N_{merger} \times OPs_{merger} = 4 \times OPs_{merger}
 $$
 
-**公式解释**：4 个 merger（1 主 + 3 deepstack）结构相同，计算量直接乘以 4。
+$$
+\approx B \cdot N_m \times 321{,}017{,}856
+$$
+
+**公式解释**：代码对 4 个 merger 循环执行相同计算（[backend/models/qwen3_vl.py:171](backend/models/qwen3_vl.py#L171)），计算量直接乘以 $N_{merger}=4$。架构上主 merger 的 LayerNorm 输入维度为 $H_v$（concat 前），代码统一用 $H_{merger}$ 是保守估计，误差约 $3 \times H_v \times 7 \times B \times N_m$，占总量不足 $0.01\%$，可忽略。
 
 ---
 
