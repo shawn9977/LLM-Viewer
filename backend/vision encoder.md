@@ -265,11 +265,37 @@ $$
 
 Merger 将 Vision Encoder 输出的视觉 token 投影到 LLM 的隐藏空间，使视觉 token 可以拼接到文本序列中。
 
-实际结构为 `Qwen3VLVisionPatchMerger`，包含：
-- **主 merger**（1 个）：`LayerNorm(H_v)` → concat $S_m^2$ 个 patch → `Linear(H_{merger}, H_{merger})` → `GELU` → `Linear(H_{merger}, H_{out,v})`
-- **deepstack mergers**（3 个，对应 ViT 层 8/16/24）：结构相同，`LayerNorm(H_{merger})` → `Linear(H_{merger}, H_{merger})` → `GELU` → `Linear(H_{merger}, H_{out,v})`
+实际结构为 `Qwen3VLVisionPatchMerger`，共包含 **4 个 merger**，分为两种类型：
 
-其中 merger 输入维度：
+### 主 merger（1 个）
+
+$$
+\text{LayerNorm}(H_v) \;\to\; \text{concat}(S_m^2 \text{ 个 patch}) \;\to\; \text{Linear}(H_{merger}, H_{merger}) \;\to\; \text{GELU} \;\to\; \text{Linear}(H_{merger}, H_{out,v})
+$$
+
+- LayerNorm 作用在 concat **之前**，输入维度为 $H_v$（单个 patch 的特征维度）
+- concat 将相邻 $S_m^2 = 4$ 个 patch 的特征拼接，维度从 $H_v$ 扩展为 $H_{merger}$
+- 随后经过两个线性层和 GELU 激活，输出对齐 LLM 的 $H_{out,v}$ 维度
+
+### deepstack mergers（3 个，对应 ViT 层 8/16/24）
+
+$$
+\text{LayerNorm}(H_{merger}) \;\to\; \text{Linear}(H_{merger}, H_{merger}) \;\to\; \text{GELU} \;\to\; \text{Linear}(H_{merger}, H_{out,v})
+$$
+
+- LayerNorm 作用在 concat **之后**，输入维度已经是 $H_{merger}$（4 个 patch 拼接后的维度）
+- 无独立的 concat 步骤，直接对已合并的特征做投影
+- 线性层结构与主 merger 相同
+
+### 两种 merger 的关键区别
+
+| | 主 merger | deepstack merger |
+|---|---|---|
+| 数量 | 1 个 | 3 个（ViT 层 8/16/24） |
+| LayerNorm 输入维度 | $H_v$（concat 前） | $H_{merger}$（concat 后） |
+| 是否含独立 concat | 是 | 否 |
+
+### merger 输入维度
 
 $$
 H_{merger} = S_m^2 \times H_v = 4 \times 1152 = 4608
@@ -277,10 +303,12 @@ $$
 
 **含义**：空间合并将相邻 $S_m \times S_m = 4$ 个 patch 的特征拼接，输入维度从 $H_v$ 扩展为 $H_{merger}$。
 
-总 merger 数量：
+### 总 merger 数量
+
+设 `deepstack_visual_indexes` 为 deepstack merger 对应的 ViT 层索引列表（默认为 $[8, 16, 24]$，共 3 个），则：
 
 $$
-N_{merger} = 1 + |\text{deepstack\_visual\_indexes}| = 1 + 3 = 4
+N_{merger} = 1 + |\,\text{deepstack visual indexes}\,| = 1 + 3 = 4
 $$
 
 > 代码位置：[backend/models/qwen3_vl.py:155](backend/models/qwen3_vl.py#L155)，[backend/model_analyzer.py:1321-1327](backend/model_analyzer.py#L1321)
@@ -302,7 +330,7 @@ $$
 | **激活加载** | $B \cdot N_m \cdot H_{merger} \cdot a_{byte}$ | 输入激活 |
 | **激活存储** | $B \cdot N_m \cdot H_{merger} \cdot a_{byte}$ | 归一化后激活 |
 
-**公式解释**：LayerNorm 对每个 token 的 $H_{merger}$ 维向量计算均值和方差，再做归一化和仿射变换，共 7 步基本操作。注意主 merger 的 norm 输入维度是 $H_v=1152$（在 concat 之前），deepstack mergers 的 norm 输入维度是 $H_{merger}=4608$（在 concat 之后）。代码中统一使用 `merger_input_size`（即 $H_{merger}$）计算，是保守估计。
+**公式解释**：LayerNorm 对每个 token 的向量计算均值和方差，再做归一化和仿射变换，共 7 步基本操作。两种 merger 的 norm 输入维度不同：主 merger 的 norm 在 concat 之前，输入维度为 $H_v=1152$；deepstack mergers 的 norm 在 concat 之后，输入维度为 $H_{merger}=4608$。代码中统一使用 `merger_input_size`（即 $H_{merger}$）计算，对主 merger 是保守估计。
 
 ---
 
