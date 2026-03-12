@@ -108,140 +108,80 @@ $$
 
 ### 1.3 Vision Encoder 线性层（Q/K/V/O 投影 + MLP）
 
-每个 Transformer 块包含 6 个线性层，共重复 $L_v$ 次。注意：线性层作用在空间合并后的 $N_m$ 个 token 上。
+每个 Transformer 块包含 6 个线性层，共重复 $L_v$ 次。Vision MLP 使用标准结构（fc1 + GELUTanh + fc2），**不是 SwiGLU**，无 gate_proj。
 
-Vision MLP 使用标准结构（fc1 + GELUTanh + fc2），**不是 SwiGLU**，无 gate_proj。
+| 层名 | OPs 公式 | 权重加载 | 激活加载 | 激活存储 |
+|------|----------|----------|----------|----------|
+| `vision_q_proj` | $H_v \cdot (H_v/tp) \cdot B \cdot N_m \times 2$ | $H_v \cdot (H_v/tp) \cdot w_{byte}$ | $H_v \cdot B \cdot N_m \cdot a_{byte}$ | $(H_v/tp) \cdot B \cdot N_m \cdot a_{byte}$ |
+| `vision_k_proj` | $H_v \cdot (H_v/tp) \cdot B \cdot N_m \times 2$ | $H_v \cdot (H_v/tp) \cdot w_{byte}$ | $H_v \cdot B \cdot N_m \cdot a_{byte}$ | $(H_v/tp) \cdot B \cdot N_m \cdot a_{byte}$ |
+| `vision_v_proj` | $H_v \cdot (H_v/tp) \cdot B \cdot N_m \times 2$ | $H_v \cdot (H_v/tp) \cdot w_{byte}$ | $H_v \cdot B \cdot N_m \cdot a_{byte}$ | $(H_v/tp) \cdot B \cdot N_m \cdot a_{byte}$ |
+| `vision_out_proj` | $(H_v/tp) \cdot H_v \cdot B \cdot N_m \times 2$ | $(H_v/tp) \cdot H_v \cdot w_{byte}$ | $(H_v/tp) \cdot B \cdot N_m \cdot a_{byte}$ | $H_v \cdot B \cdot N_m \cdot a_{byte}$ |
+| `vision_up_proj`（fc1） | $H_v \cdot (I_v/tp) \cdot B \cdot N_m \times 2$ | $H_v \cdot (I_v/tp) \cdot w_{byte}$ | $H_v \cdot B \cdot N_m \cdot a_{byte}$ | $(I_v/tp) \cdot B \cdot N_m \cdot a_{byte}$ |
+| `vision_down_proj`（fc2） | $(I_v/tp) \cdot H_v \cdot B \cdot N_m \times 2$ | $(I_v/tp) \cdot H_v \cdot w_{byte}$ | $(I_v/tp) \cdot B \cdot N_m \cdot a_{byte}$ | $H_v \cdot B \cdot N_m \cdot a_{byte}$ |
 
-| 层名 | 输入维 $IC$ | 输出维 $OC$ | 作用 |
-|------|------------|------------|------|
-| `vision_q_proj` | $H_v$ | $H_v / tp$ | Query 投影 |
-| `vision_k_proj` | $H_v$ | $H_v / tp$ | Key 投影 |
-| `vision_v_proj` | $H_v$ | $H_v / tp$ | Value 投影 |
-| `vision_out_proj` | $H_v / tp$ | $H_v$ | 注意力输出投影 |
-| `vision_up_proj` | $H_v$ | $I_v / tp$ | MLP fc1（唯一的升维投影） |
-| `vision_down_proj` | $I_v / tp$ | $H_v$ | MLP fc2（降维投影） |
+**公式解释**：线性层 $Y = XW$，每个输出元素需要 $IC$ 次乘法和 $IC$ 次加法，共 $IC \times OC \times B \times N_m \times 2$ 次操作。权重只需加载一次，与 token 数无关，这是 decode 阶段内存瓶颈的根本原因。
 
-对每个线性层，公式如下：
-
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| **计算量 OPs** | $IC \times OC \times B \times N_m \times 2$ | 矩阵乘法，$B \times N_m$ 个 token 并行 |
-| **权重加载** | $IC \times OC \times w_{byte}$ | 权重矩阵大小，与 batch/token 数无关 |
-| **激活加载** | $IC \times B \times N_m \times a_{byte}$ | 输入激活张量 |
-| **激活存储** | $OC \times B \times N_m \times a_{byte}$ | 输出激活张量 |
-
-**公式解释**：线性层 $Y = XW$，$X$ 形状为 $(B \cdot N_m,\ IC)$，$W$ 形状为 $(IC,\ OC)$，每个输出元素需要 $IC$ 次乘法和 $IC$ 次加法，共 $IC \times OC \times B \times N_m \times 2$ 次操作。权重只需加载一次，与 token 数无关，这是 decode 阶段内存瓶颈的根本原因。
-
-> 代码位置：[backend/model_analyzer.py:1185-1195](backend/model_analyzer.py#L1185)
+> 代码位置：[backend/model_analyzer.py:1186-1197](backend/model_analyzer.py#L1186)，[backend/models/qwen3_vl.py:136-152](backend/models/qwen3_vl.py#L136)
 
 ---
 
 ### 1.4 Vision Encoder 注意力机制
 
-Vision Encoder 使用标准多头自注意力（无 GQA/MQA），序列长度为 $N_m$。
+Vision Encoder 使用标准多头自注意力（无 GQA/MQA），序列长度为 $N_m$，每个 Transformer 块重复 $L_v$ 次。
 
-#### QK 矩阵乘法（$Q \cdot K^T$）
+| 算子 | OPs 公式 | 激活加载 | 激活存储 |
+|------|----------|----------|----------|
+| `vision_qk_matmul` | $N_m^2 \cdot H_{v,head} \cdot N_{v,h} \cdot B \times 2$ | $N_m \cdot H_{v,head} \cdot N_{v,h} \cdot B \cdot a_{byte}$（Q） | $N_m^2 \cdot N_{v,h} \cdot B \cdot a_{byte}$ |
+| `vision_softmax` | $B \cdot N_{v,h} \cdot N_m^2 \times 5$ | $N_m^2 \cdot N_{v,h} \cdot B \cdot a_{byte}$ | $N_m^2 \cdot N_{v,h} \cdot B \cdot a_{byte}$ |
+| `vision_sv_matmul` | $N_m^2 \cdot H_{v,head} \cdot N_{v,h} \cdot B \times 2$ | $N_m^2 \cdot N_{v,h} \cdot B \cdot a_{byte}$（attn weights） | $N_m \cdot H_{v,head} \cdot N_{v,h} \cdot B \cdot a_{byte}$ |
 
-$$
-OPs_{qk} = N_m \times N_m \times H_{v,head} \times N_{v,h} \times B \times 2
-$$
+**说明**：
+- `vision_qk_matmul`：$Q(B, N_{v,h}, N_m, H_{v,head}) \times K^T(B, N_{v,h}, H_{v,head}, N_m)$，每个输出元素需 $H_{v,head}$ 次乘加
+- `vision_softmax`：对每行 $N_m$ 个元素执行 5 步（max、sub、exp、sum、div）
+- `vision_sv_matmul`：注意力权重 $(B, N_{v,h}, N_m, N_m) \times V(B, N_{v,h}, N_m, H_{v,head})$，每个输出元素需 $N_m$ 次乘加
+- Vision Encoder **不使用 KV Cache**，无 KV Cache 加载
 
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| **计算量 OPs** | $N_m^2 \cdot H_{v,head} \cdot N_{v,h} \cdot B \times 2$ | 每个 head 计算 $N_m \times N_m$ 的注意力分数矩阵 |
-| **激活加载** | $N_m \cdot H_{v,head} \cdot B \cdot N_{v,h} \cdot a_{byte}$ | 加载 Q 矩阵（形状 $B \times N_{v,h} \times N_m \times H_{v,head}$） |
-| **激活存储** | $N_m^2 \cdot B \cdot N_{v,h} \cdot a_{byte}$ | 存储注意力分数矩阵（形状 $B \times N_{v,h} \times N_m \times N_m$） |
-| **KV Cache 加载** | 无（Vision Encoder 不使用 KV Cache） | — |
-
-**公式解释**：$Q$ 形状为 $(B, N_{v,h}, N_m, H_{v,head})$，$K^T$ 形状为 $(B, N_{v,h}, H_{v,head}, N_m)$，矩阵乘法结果形状为 $(B, N_{v,h}, N_m, N_m)$，每个元素需要 $H_{v,head}$ 次乘加，故总 OPs = $N_m \times N_m \times H_{v,head} \times N_{v,h} \times B \times 2$。
-
-#### SV 矩阵乘法（$\text{Softmax}(QK^T) \cdot V$）
-
-$$
-OPs_{sv} = N_m \times H_{v,head} \times N_m \times N_{v,h} \times B \times 2
-$$
-
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| **计算量 OPs** | $N_m \cdot H_{v,head} \cdot N_m \cdot N_{v,h} \cdot B \times 2$ | 注意力权重矩阵乘以 V |
-| **激活加载** | $N_m^2 \cdot B \cdot N_{v,h} \cdot a_{byte}$ | 加载 Softmax 后的注意力权重 |
-| **激活存储** | $N_m \cdot H_{v,head} \cdot B \cdot N_{v,h} \cdot a_{byte}$ | 存储注意力输出（形状同 Q） |
-
-**公式解释**：注意力权重形状 $(B, N_{v,h}, N_m, N_m)$ 乘以 $V$ 形状 $(B, N_{v,h}, N_m, H_{v,head})$，结果形状 $(B, N_{v,h}, N_m, H_{v,head})$，每个元素需要 $N_m$ 次乘加。
-
-#### Softmax
-
-$$
-OPs_{softmax} = B \times N_{v,h} \times N_m \times N_m \times 5
-$$
-
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| **计算量 OPs** | $B \cdot N_{v,h} \cdot N_m^2 \times 5$ | 5 步：max、sub、exp、sum、div |
-| **激活加载** | $B \cdot N_{v,h} \cdot N_m^2 \cdot a_{byte}$ | 加载注意力分数矩阵 |
-| **激活存储** | $B \cdot N_{v,h} \cdot N_m^2 \cdot a_{byte}$ | 存储归一化后的注意力权重 |
-
-**公式解释**：Softmax 对每行 $N_m$ 个元素执行 5 步操作（求最大值用于数值稳定、减最大值、取指数、求和、除以和），共 $N_m \times 5$ 次操作，对 $B \times N_{v,h} \times N_m$ 行执行。
-
-> 代码位置：[backend/model_analyzer.py:1199-1253](backend/model_analyzer.py#L1199)
+> 代码位置：[backend/model_analyzer.py:1200-1255](backend/model_analyzer.py#L1200)
 
 ---
 
 ### 1.5 Vision Encoder 归一化层（LayerNorm）
 
-Vision Encoder 使用 LayerNorm（而非 LLM 的 RMSNorm），每个 Transformer 块有 2 个：`vision_norm1`（注意力前）和 `vision_norm2`（MLP 前）。
+每个 Transformer 块有 2 个：`vision_norm1`（注意力前）和 `vision_norm2`（MLP 前），共重复 $L_v$ 次。
 
-$$
-OPs_{layernorm} = B \times H_v \times N_m \times 7
-$$
+| 算子 | OPs 公式 | 激活加载 | 激活存储 |
+|------|----------|----------|----------|
+| `vision_norm1` / `vision_norm2` | $B \cdot H_v \cdot N_m \times 7$ | $B \cdot H_v \cdot N_m \cdot a_{byte}$ | $B \cdot H_v \cdot N_m \cdot a_{byte}$ |
 
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| **计算量 OPs** | $B \cdot H_v \cdot N_m \times 7$ | 7 步：均值、方差、减均值、除标准差、缩放、偏移、输出 |
-| **激活加载** | $B \cdot H_v \cdot N_m \cdot a_{byte}$ | 输入激活 |
-| **激活存储** | $B \cdot H_v \cdot N_m \cdot a_{byte}$ | 归一化后的激活 |
+**说明**：LayerNorm 对每个 token 的 $H_v$ 维向量执行 7 步操作（均值 2 步、方差 2 步、归一化 1 步、仿射变换 2 步）。与 LLM 的 RMSNorm（4 步）相比多了均值计算。
 
-**公式解释**：LayerNorm 对每个 token 的 $H_v$ 维向量执行归一化，需要 7 步基本操作（均值计算 2 步、方差计算 2 步、归一化 1 步、仿射变换 2 步）。与 RMSNorm（4 步，无均值计算）相比计算量更大。
-
-> 代码位置：[backend/model_analyzer.py:1256-1267](backend/model_analyzer.py#L1256)
+> 代码位置：[backend/model_analyzer.py:1257-1269](backend/model_analyzer.py#L1257)
 
 ---
 
 ### 1.6 Vision Encoder 残差连接
 
-每个 Transformer 块有 2 个残差加法：`vision_attn_add`（注意力后）和 `vision_mlp_add`（MLP 后）。
+每个 Transformer 块有 2 个：`vision_attn_add`（注意力后）和 `vision_mlp_add`（MLP 后），共重复 $L_v$ 次。
 
-$$
-OPs_{add} = B \times H_v \times N_m
-$$
+| 算子 | OPs 公式 | 激活加载 | 激活存储 |
+|------|----------|----------|----------|
+| `vision_attn_add` / `vision_mlp_add` | $B \cdot H_v \cdot N_m$ | $B \cdot H_v \cdot N_m \cdot a_{byte}$ | $B \cdot H_v \cdot N_m \cdot a_{byte}$ |
 
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| **计算量 OPs** | $B \cdot H_v \cdot N_m$ | 逐元素加法，每个元素 1 次操作 |
-| **激活加载** | $B \cdot H_v \cdot N_m \cdot a_{byte}$ | 加载残差输入 |
-| **激活存储** | $B \cdot H_v \cdot N_m \cdot a_{byte}$ | 存储残差输出 |
+**说明**：逐元素加法 $x = x + \text{sublayer}(x)$，每个元素 1 次操作，无权重。
 
-**公式解释**：残差连接 $x = x + \text{sublayer}(x)$，对 $B \times N_m \times H_v$ 个元素各执行 1 次加法。
-
-> 代码位置：[backend/model_analyzer.py:1270-1280](backend/model_analyzer.py#L1270)
+> 代码位置：[backend/model_analyzer.py:1271-1282](backend/model_analyzer.py#L1271)
 
 ---
 
 ### 1.7 Vision Encoder MLP 激活函数（GELUTanh）
 
-Vision MLP 使用 `GELUTanh`（即 `GELU(approximate='tanh')`），作用在 fc1 输出上，维度为 $I_v$。
+作用在 `vision_up_proj`（fc1）输出上，维度为 $I_v$（不是 $H_v$），重复 $L_v$ 次。
 
-$$
-OPs_{act} = B \times I_v \times N_m \times 5
-$$
+| 算子 | OPs 公式 | 激活加载 | 激活存储 |
+|------|----------|----------|----------|
+| `vision_mlp_act` | $B \cdot I_v \cdot N_m \times 5$ | $B \cdot I_v \cdot N_m \cdot a_{byte}$ | $B \cdot I_v \cdot N_m \cdot a_{byte}$ |
 
-| 指标 | 公式 | 说明 |
-|------|------|------|
-| **计算量 OPs** | $B \cdot I_v \cdot N_m \times 5$ | GELUTanh 近似计算约 5 步 |
-| **激活加载** | $B \cdot I_v \cdot N_m \cdot a_{byte}$ | vision_up_proj（fc1）输出，维度 $I_v$ |
-| **激活存储** | $B \cdot I_v \cdot N_m \cdot a_{byte}$ | 激活后结果，送入 vision_down_proj（fc2） |
-
-**公式解释**：GELUTanh 使用 tanh 近似：$\text{GELU}(x) \approx 0.5x\left(1 + \tanh\!\left(\sqrt{2/\pi}(x + 0.044715x^3)\right)\right)$，约 5 步基本操作。注意维度是 $I_v=4304$（fc1 输出），而非 $H_v=1152$。
+**说明**：$\text{GELU}(x) \approx 0.5x\!\left(1 + \tanh\!\left(\sqrt{2/\pi}(x + 0.044715x^3)\right)\right)$，约 5 步。注意维度是 $I_v$（如 4304），不是 $H_v$（1152）。
 
 > 代码位置：[backend/model_analyzer.py:1284-1294](backend/model_analyzer.py#L1284)
 
@@ -255,9 +195,26 @@ $$
 \text{总计算量}_{vision} = OPs_{patch\_embed} + L_v \times \sum_{\text{重复层}} OPs_i
 $$
 
-重复层集合：`vision_q/k/v/out_proj`、`vision_up/down_proj`、`vision_qk/sv_matmul`、`vision_softmax`、`vision_norm1/2`、`vision_attn/mlp_add`、`vision_mlp_act`
+**所有算子 OPs 公式一览**（重复层均乘以 $L_v$）：
 
-> 代码位置：[backend/model_analyzer.py:1295-1318](backend/model_analyzer.py#L1295)
+| 算子 | OPs 公式 | 重复 |
+|------|----------|------|
+| `vision_patch_embed` | $C \cdot T_p \cdot P^2 \cdot H_v \cdot B \cdot N_p \times 2$ | ×1 |
+| `vision_norm1` / `vision_norm2` | $B \cdot H_v \cdot N_m \times 7$ | ×$L_v$ |
+| `vision_q_proj` | $H_v \cdot (H_v/tp) \cdot B \cdot N_m \times 2$ | ×$L_v$ |
+| `vision_k_proj` | $H_v \cdot (H_v/tp) \cdot B \cdot N_m \times 2$ | ×$L_v$ |
+| `vision_v_proj` | $H_v \cdot (H_v/tp) \cdot B \cdot N_m \times 2$ | ×$L_v$ |
+| `vision_qk_matmul` | $N_m^2 \cdot H_{v,head} \cdot N_{v,h} \cdot B \times 2$ | ×$L_v$ |
+| `vision_softmax` | $B \cdot N_{v,h} \cdot N_m^2 \times 5$ | ×$L_v$ |
+| `vision_sv_matmul` | $N_m \cdot H_{v,head} \cdot N_m \cdot N_{v,h} \cdot B \times 2$ | ×$L_v$ |
+| `vision_out_proj` | $(H_v/tp) \cdot H_v \cdot B \cdot N_m \times 2$ | ×$L_v$ |
+| `vision_attn_add` | $B \cdot H_v \cdot N_m$ | ×$L_v$ |
+| `vision_up_proj`（fc1） | $H_v \cdot (I_v/tp) \cdot B \cdot N_m \times 2$ | ×$L_v$ |
+| `vision_mlp_act`（GELUTanh） | $B \cdot I_v \cdot N_m \times 5$ | ×$L_v$ |
+| `vision_down_proj`（fc2） | $(I_v/tp) \cdot H_v \cdot B \cdot N_m \times 2$ | ×$L_v$ |
+| `vision_mlp_add` | $B \cdot H_v \cdot N_m$ | ×$L_v$ |
+
+> 代码位置：[backend/model_analyzer.py:1186-1318](backend/model_analyzer.py#L1186)，[backend/models/qwen3_vl.py:136-152](backend/models/qwen3_vl.py#L136)
 
 ---
 
