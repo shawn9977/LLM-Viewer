@@ -755,3 +755,373 @@ $$
 | 归一化/残差/激活 | 极低 | 内存瓶颈 | 计算量小，内存访问量相对大 |
 | Vision 线性层 | 中等（$\approx 2N_m$） | 计算瓶颈（$N_m$ 大时） | 类似 LLM prefill，$N_m$ 个 token 并行 |
 | Vision 注意力 | $O(N_m)$（高） | 计算瓶颈 | $N_m^2$ 计算量 |
+
+---
+
+## 第五部分：端到端推理时间计算示例
+
+> 本节以 **Qwen3-VL-32B-Instruct，1024×1024 图像，Batchsize=1** 为例，完整演示如何从模型参数和硬件规格出发，逐步计算出 Vision Stage、Prefill、Decode 三个阶段的 `inference_time`。
+
+---
+
+### 5.1 示例配置与参数来源
+
+#### 输入配置
+
+| 参数 | 值 | 来源 |
+|------|-----|------|
+| 模型 | Qwen3-VL-32B-Instruct | 用户选择 |
+| 图像尺寸 $W_{img} \times H_{img}$ | $1024 \times 1024$ | `image_size` |
+| Batchsize $B$ | $1$ | `batchsize` |
+| 文本序列长度 $S_{text}$ | $128$（示例提示词） | `seqlen` |
+| 精度 | BF16（$w\_bit=16, a\_bit=16, kv\_bit=16$） | 默认 |
+| 张量并行 $tp$ | $1$ | 默认 |
+| 硬件 | NVIDIA H100 SXM | 用户选择 |
+
+#### 从 config.json 读取的模型参数
+
+**LLM（text_config）：**
+
+| 符号 | 值 | 字段名 |
+|------|-----|--------|
+| $H$ | 5120 | `hidden_size` |
+| $H_{head}$ | 128 | `head_dim` |
+| $N_h$ | 64 | `num_attention_heads` |
+| $N_{kv}$ | 8 | `num_key_value_heads` |
+| $L$ | 64 | `num_hidden_layers` |
+| $I$ | 25600 | `intermediate_size` |
+| $V$ | 151936 | `vocab_size` |
+
+**Vision（vision_config）：**
+
+| 符号 | 值 | 字段名 |
+|------|-----|--------|
+| $H_v$ | 1152 | `hidden_size` |
+| $N_{v,h}$ | 16 | `num_heads` |
+| $H_{v,head}$ | $1152/16=72$ | 计算得到 |
+| $L_v$ | 27 | `depth` |
+| $I_v$ | 4304 | `intermediate_size` |
+| $C$ | 3 | `in_channels` |
+| $P$ | 16 | `patch_size` |
+| $T_p$ | 2 | `temporal_patch_size` |
+| $S_m$ | 2 | `spatial_merge_size` |
+| $H_{out,v}$ | 5120 | `out_hidden_size` |
+| $H_{merger}$ | $2^2 \times 1152 = 4608$ | 计算得到 |
+| $N_{merger}$ | $1+3=4$ | `deepstack_visual_indexes` 长度+1 |
+
+#### 从 hardwares.py 读取的硬件参数
+
+| 参数 | 值 |
+|------|-----|
+| 内存带宽 | $3072\ \text{GB/s} = 3.072 \times 10^{12}\ \text{bytes/s}$ |
+| 峰值算力（FP16） | $989.5\ \text{TFLOPS} = 9.895 \times 10^{14}\ \text{OPS}$ |
+| 转折点 | $989.5\text{T} / 3.072\text{T} \approx 322\ \text{OPs/byte}$ |
+
+字节数：$w_{byte} = a_{byte} = kv_{byte} = 2$
+
+---
+
+### 5.2 关键中间量推导
+
+**Patch 数量：**
+
+$$N_{p,w} = \left\lfloor \frac{1024}{16} \right\rfloor = 64, \quad N_{p,h} = 64, \quad N_p = 64 \times 64 = 4096$$
+
+**空间合并后 token 数：**
+
+$$N_m = \frac{N_p}{S_m^2} = \frac{4096}{4} = 1024$$
+
+**LLM Prefill 序列长度：**
+
+视觉 token 经 Merger 投影后拼接到文本序列，LLM 看到的总序列长度为：
+
+$$S = S_{text} + N_m = 128 + 1024 = 1152$$
+
+---
+
+### 5.3 Roofline 判断逻辑（每个算子通用）
+
+对每个算子，按以下步骤计算推理时间：
+
+$$\text{算术强度（AI）} = \frac{OPs}{\text{内存访问量（bytes）}}$$
+
+$$\text{实际性能} = \begin{cases} AI \times \text{带宽} & \text{若 } AI < 322\ \text{（内存瓶颈）} \\ 989.5\ \text{TFLOPS} & \text{若 } AI \geq 322\ \text{（计算瓶颈）} \end{cases}$$
+
+$$\text{算子推理时间} = \frac{OPs}{\text{实际性能}}$$
+
+**整个阶段的推理时间 = 该阶段所有算子推理时间之和。**
+
+---
+
+### 5.4 Vision Stage 推理时间计算
+
+#### 5.4.1 Patch Embedding（执行 1 次）
+
+$$OPs = C \cdot T_p \cdot P^2 \cdot H_v \cdot B \cdot N_p \times 2 = 3 \times 2 \times 256 \times 1152 \times 1 \times 4096 \times 2 \approx 14.5\ \text{GFLOPs}$$
+
+$$\text{内存访问} = \underbrace{C \cdot T_p \cdot P^2 \cdot H_v \cdot w_{byte}}_{\text{权重 3.4 MB}} + \underbrace{C \cdot T_p \cdot P^2 \cdot B \cdot N_p \cdot a_{byte}}_{\text{输入激活 12 MB}} + \underbrace{H_v \cdot B \cdot N_p \cdot a_{byte}}_{\text{输出激活 9 MB}} \approx 24.4\ \text{MB}$$
+
+$$AI = \frac{14.5\ \text{G}}{24.4\ \text{M}} \approx 594\ \text{OPs/byte} > 322 \Rightarrow \text{计算瓶颈}$$
+
+$$t_{patch\_embed} = \frac{14.5\ \text{G}}{989.5\ \text{T}} \approx 14.7\ \mu s$$
+
+#### 5.4.2 Vision Encoder 每层代表性算子（重复 $L_v=27$ 次）
+
+以下展示每层中计算量最大的算子：
+
+**vision\_up\_proj（fc1，$H_v \to I_v$）：**
+
+$$OPs = H_v \cdot I_v \cdot B \cdot N_m \times 2 = 1152 \times 4304 \times 1 \times 1024 \times 2 \approx 10.16\ \text{GFLOPs}$$
+
+$$\text{内存访问} = \underbrace{1152 \times 4304 \times 2}_{\text{权重 9.46 MB}} + \underbrace{1152 \times 1024 \times 2}_{\text{输入 2.25 MB}} + \underbrace{4304 \times 1024 \times 2}_{\text{输出 8.41 MB}} \approx 20.1\ \text{MB}$$
+
+$$AI = \frac{10.16\ \text{G}}{20.1\ \text{M}} \approx 505\ \text{OPs/byte} > 322 \Rightarrow \text{计算瓶颈}$$
+
+$$t_{up\_proj} = \frac{10.16\ \text{G}}{989.5\ \text{T}} \approx 10.3\ \mu s$$
+
+**vision\_qk\_matmul（注意力 QK 点积）：**
+
+$$OPs = N_m^2 \cdot H_{v,head} \cdot N_{v,h} \cdot B \times 2 = 1024^2 \times 72 \times 16 \times 1 \times 2 \approx 2.42\ \text{GFLOPs}$$
+
+$$\text{内存访问} = \underbrace{N_m \cdot H_{v,head} \cdot N_{v,h} \cdot B \cdot a_{byte}}_{\text{Q: 2.25 MB}} + \underbrace{N_m^2 \cdot N_{v,h} \cdot B \cdot a_{byte}}_{\text{输出注意力分数: 32 MB}} \approx 34.3\ \text{MB}$$
+
+$$AI = \frac{2.42\ \text{G}}{34.3\ \text{M}} \approx 70.6\ \text{OPs/byte} < 322 \Rightarrow \text{内存瓶颈}$$
+
+$$\text{实际性能} = 70.6 \times 3.072\ \text{T} \approx 216.9\ \text{TFLOPS}$$
+
+$$t_{qk\_matmul} = \frac{2.42\ \text{G}}{216.9\ \text{T}} \approx 11.2\ \mu s$$
+
+#### 5.4.3 Vision Encoder 每层总时间汇总
+
+| 算子 | OPs | 内存访问 | AI | 瓶颈 | 时间 |
+|------|-----|----------|----|------|------|
+| `vision_norm1` | 8.26 MFLOPs | 4.5 MB | 1.84 | 内存 | 1.46 μs |
+| `vision_q_proj` | 2.72 GFLOPs | 7.03 MB | 387 | 计算 | 2.75 μs |
+| `vision_k_proj` | 2.72 GFLOPs | 7.03 MB | 387 | 计算 | 2.75 μs |
+| `vision_v_proj` | 2.72 GFLOPs | 7.03 MB | 387 | 计算 | 2.75 μs |
+| `vision_qk_matmul` | 2.42 GFLOPs | 34.3 MB | 70.6 | 内存 | 11.2 μs |
+| `vision_softmax` | 83.9 MFLOPs | 64 MB | 1.31 | 内存 | 20.9 μs |
+| `vision_sv_matmul` | 2.42 GFLOPs | 34.3 MB | 70.6 | 内存 | 11.2 μs |
+| `vision_out_proj` | 2.72 GFLOPs | 7.03 MB | 387 | 计算 | 2.75 μs |
+| `vision_attn_add` | 1.18 MFLOPs | 4.5 MB | 0.26 | 内存 | 1.48 μs |
+| `vision_norm2` | 8.26 MFLOPs | 4.5 MB | 1.84 | 内存 | 1.46 μs |
+| `vision_up_proj` | 10.16 GFLOPs | 20.1 MB | 505 | 计算 | 10.3 μs |
+| `vision_mlp_act` | 22 MFLOPs | 16.8 MB | 1.31 | 内存 | 5.47 μs |
+| `vision_down_proj` | 10.16 GFLOPs | 20.1 MB | 505 | 计算 | 10.3 μs |
+| `vision_mlp_add` | 1.18 MFLOPs | 4.5 MB | 0.26 | 内存 | 1.48 μs |
+| **每层合计** | **≈ 36.1 GFLOPs** | | | | **≈ 86.2 μs** |
+
+$$t_{vision\_encoder} = t_{patch\_embed} + L_v \times t_{per\_layer} = 14.7 + 27 \times 86.2 \approx 2,342\ \mu s \approx 2.34\ \text{ms}$$
+
+#### 5.4.4 Merger 时间（4 个 merger）
+
+每个 merger 的主导算子是 fc1 和 fc2：
+
+**fc1（$H_{merger} \to H_{merger}$，方阵投影）：**
+
+$$OPs = B \cdot N_m \cdot H_{merger}^2 \times 2 = 1 \times 1024 \times 4608^2 \times 2 \approx 43.5\ \text{GFLOPs}$$
+
+$$\text{内存访问} = \underbrace{4608^2 \times 2}_{\text{权重 40.5 MB}} + \underbrace{1024 \times 4608 \times 2}_{\text{输入 9 MB}} + \underbrace{1024 \times 4608 \times 2}_{\text{输出 9 MB}} \approx 58.5\ \text{MB}$$
+
+$$AI = \frac{43.5\ \text{G}}{58.5\ \text{M}} \approx 743\ \text{OPs/byte} > 322 \Rightarrow \text{计算瓶颈}$$
+
+$$t_{fc1} = \frac{43.5\ \text{G}}{989.5\ \text{T}} \approx 44.0\ \mu s$$
+
+**fc2（$H_{merger} \to H_{out,v}$，输出投影）：**
+
+$$OPs = B \cdot N_m \cdot H_{merger} \cdot H_{out,v} \times 2 = 1 \times 1024 \times 4608 \times 5120 \times 2 \approx 48.3\ \text{GFLOPs}$$
+
+$$\text{内存访问} = \underbrace{4608 \times 5120 \times 2}_{\text{权重 45 MB}} + \underbrace{1024 \times 4608 \times 2}_{\text{输入 9 MB}} + \underbrace{1024 \times 5120 \times 2}_{\text{输出 10 MB}} \approx 64\ \text{MB}$$
+
+$$AI = \frac{48.3\ \text{G}}{64\ \text{M}} \approx 755\ \text{OPs/byte} > 322 \Rightarrow \text{计算瓶颈}$$
+
+$$t_{fc2} = \frac{48.3\ \text{G}}{989.5\ \text{T}} \approx 48.8\ \mu s$$
+
+每个 merger 总时间 $\approx 44.0 + 48.8 + \text{(ln+act 约 1 μs)} \approx 93.8\ \mu s$
+
+$$t_{merger} = N_{merger} \times t_{per\_merger} = 4 \times 93.8 \approx 375\ \mu s$$
+
+**Vision Stage 总推理时间：**
+
+$$\boxed{t_{vision} = t_{vision\_encoder} + t_{merger} \approx 2342 + 375 \approx 2717\ \mu s \approx 2.72\ \text{ms}}$$
+
+---
+
+### 5.5 Prefill 推理时间计算（$S=1152$）
+
+Prefill 阶段 LLM 一次性处理全部 1152 个 token（128 文本 + 1024 视觉）。
+
+#### 5.5.1 线性层（每层 7 个，重复 $L=64$ 次）
+
+**q\_proj（$H \to N_h \cdot H_{head}$，即 $5120 \to 8192$）：**
+
+$$OPs = H \cdot (N_h \cdot H_{head}) \cdot B \cdot S \times 2 = 5120 \times 8192 \times 1 \times 1152 \times 2 \approx 96.6\ \text{GFLOPs}$$
+
+$$\text{内存访问} = \underbrace{5120 \times 8192 \times 2}_{\text{权重 80 MB}} + \underbrace{5120 \times 1152 \times 2}_{\text{输入 11.25 MB}} + \underbrace{8192 \times 1152 \times 2}_{\text{输出 18 MB}} \approx 109.3\ \text{MB}$$
+
+$$AI = \frac{96.6\ \text{G}}{109.3\ \text{M}} \approx 884\ \text{OPs/byte} > 322 \Rightarrow \text{计算瓶颈}$$
+
+$$t_{q\_proj} = \frac{96.6\ \text{G}}{989.5\ \text{T}} \approx 97.6\ \mu s$$
+
+**gate\_proj / up\_proj（$H \to I$，即 $5120 \to 25600$）：**
+
+$$OPs = 5120 \times 25600 \times 1 \times 1152 \times 2 \approx 302\ \text{GFLOPs}$$
+
+$$\text{内存访问} = \underbrace{5120 \times 25600 \times 2}_{\text{权重 250 MB}} + \underbrace{5120 \times 1152 \times 2}_{\text{输入 11.25 MB}} + \underbrace{25600 \times 1152 \times 2}_{\text{输出 56.25 MB}} \approx 317.5\ \text{MB}$$
+
+$$AI = \frac{302\ \text{G}}{317.5\ \text{M}} \approx 951\ \text{OPs/byte} > 322 \Rightarrow \text{计算瓶颈}$$
+
+$$t_{gate\_proj} = t_{up\_proj} = \frac{302\ \text{G}}{989.5\ \text{T}} \approx 305\ \mu s$$
+
+#### 5.5.2 注意力（每层，$S=1152$）
+
+**qk\_matmul（$S^2$ 计算）：**
+
+$$OPs = S^2 \cdot H_{head} \cdot N_h \cdot B \times 2 = 1152^2 \times 128 \times 64 \times 1 \times 2 \approx 22.0\ \text{GFLOPs}$$
+
+$$\text{内存访问} = \underbrace{S \cdot H_{head} \cdot N_h \cdot B \cdot a_{byte}}_{\text{Q: 18 MB}} + \underbrace{S \cdot H_{head} \cdot N_{kv} \cdot B \cdot kv_{byte}}_{\text{K cache: 2.25 MB}} + \underbrace{S^2 \cdot N_h \cdot B \cdot a_{byte}}_{\text{注意力分数: 162 MB}} \approx 182.3\ \text{MB}$$
+
+$$AI = \frac{22.0\ \text{G}}{182.3\ \text{M}} \approx 120.7\ \text{OPs/byte} < 322 \Rightarrow \text{内存瓶颈}$$
+
+$$\text{实际性能} = 120.7 \times 3.072\ \text{T} \approx 370.8\ \text{TFLOPS}$$
+
+$$t_{qk\_matmul} = \frac{22.0\ \text{G}}{370.8\ \text{T}} \approx 59.3\ \mu s$$
+
+#### 5.5.3 Prefill 每层时间汇总
+
+| 算子 | OPs | AI | 瓶颈 | 时间 |
+|------|-----|----|------|------|
+| `attn_norm` | 5.31 MFLOPs | 1.84 | 内存 | 0.94 μs |
+| `q_proj` | 96.6 GFLOPs | 884 | 计算 | 97.6 μs |
+| `k_proj` | 12.1 GFLOPs | 515 | 计算 | 12.2 μs |
+| `v_proj` | 12.1 GFLOPs | 515 | 计算 | 12.2 μs |
+| `qk_matmul` | 22.0 GFLOPs | 120.7 | 内存 | 59.3 μs |
+| `softmax` | 676 MFLOPs | 1.31 | 内存 | 168 μs |
+| `sv_matmul` | 22.0 GFLOPs | 120.7 | 内存 | 59.3 μs |
+| `out_proj` | 96.6 GFLOPs | 877 | 计算 | 97.6 μs |
+| `attn_add` | 5.90 MFLOPs | 0.26 | 内存 | 0.95 μs |
+| `mlp_norm` | 5.31 MFLOPs | 1.84 | 内存 | 0.94 μs |
+| `gate_proj` | 302 GFLOPs | 951 | 计算 | 305 μs |
+| `up_proj` | 302 GFLOPs | 951 | 计算 | 305 μs |
+| `mlp_act` | 147 MFLOPs | 1.31 | 内存 | 36.6 μs |
+| `down_proj` | 302 GFLOPs | 951 | 计算 | 305 μs |
+| `mlp_add` | 5.90 MFLOPs | 0.26 | 内存 | 0.95 μs |
+| **每层合计** | **≈ 1167 GFLOPs** | | | **≈ 1461 μs** |
+
+加上 lm\_head（$H \to V$，$5120 \to 151936$）：
+
+$$OPs_{lm\_head} = B \cdot S \cdot H \cdot V \times 2 = 1 \times 1152 \times 5120 \times 151936 \times 2 \approx 1793\ \text{GFLOPs}$$
+
+$$AI_{lm\_head} = \frac{1793\ \text{G}}{(5120 \times 151936 \times 2) + (1152 \times 5120 \times 2) + (1152 \times 151936 \times 2)\ \text{bytes}} \approx \frac{1793\ \text{G}}{1908\ \text{MB}} \approx 940 > 322 \Rightarrow \text{计算瓶颈}$$
+
+$$t_{lm\_head} = \frac{1793\ \text{G}}{989.5\ \text{T}} \approx 1812\ \mu s$$
+
+**Prefill 总推理时间：**
+
+$$\boxed{t_{prefill} = L \times t_{per\_layer} + t_{lm\_head} = 64 \times 1461 + 1812 \approx 95,316\ \mu s \approx 95.3\ \text{ms}}$$
+
+---
+
+### 5.6 Decode 推理时间计算（单步，KV Cache 长度 $S=1152$）
+
+Decode 阶段每次只处理 **1 个新 token**，但需要从 KV Cache 加载历史 $S=1152$ 个 token 的 K/V。
+
+#### 5.6.1 线性层（每层，序列维度=1）
+
+**q\_proj（$5120 \to 8192$）：**
+
+$$OPs = H \cdot (N_h \cdot H_{head}) \cdot B \times 2 = 5120 \times 8192 \times 1 \times 2 \approx 83.9\ \text{MFLOPs}$$
+
+$$\text{内存访问} = \underbrace{5120 \times 8192 \times 2}_{\text{权重 80 MB}} + \underbrace{5120 \times 1 \times 2}_{\text{输入 0.01 MB}} + \underbrace{8192 \times 1 \times 2}_{\text{输出 0.016 MB}} \approx 80.03\ \text{MB}$$
+
+$$AI = \frac{83.9\ \text{M}}{80.03\ \text{M}} \approx 1.05\ \text{OPs/byte} \ll 322 \Rightarrow \text{内存瓶颈}$$
+
+$$\text{实际性能} = 1.05 \times 3.072\ \text{T} \approx 3.23\ \text{TFLOPS}$$
+
+$$t_{q\_proj} = \frac{83.9\ \text{M}}{3.23\ \text{T}} \approx 26.0\ \mu s$$
+
+> **关键洞察**：Decode 阶段线性层的算术强度 $AI \approx 2B = 2$（极低），几乎完全由权重加载量决定时间，与序列长度无关。这是 LLM decode 阶段的核心性能瓶颈。
+
+**gate\_proj / up\_proj（$5120 \to 25600$）：**
+
+$$OPs = 5120 \times 25600 \times 1 \times 2 \approx 262.1\ \text{MFLOPs}$$
+
+$$\text{内存访问} \approx 5120 \times 25600 \times 2 = 250\ \text{MB（权重主导）}$$
+
+$$AI \approx \frac{262.1\ \text{M}}{250\ \text{M}} \approx 1.05 \Rightarrow \text{内存瓶颈}$$
+
+$$t_{gate\_proj} = t_{up\_proj} = \frac{262.1\ \text{M}}{1.05 \times 3.072\ \text{T}} \approx 81.3\ \mu s$$
+
+#### 5.6.2 注意力（每层，KV Cache 长度 $S=1152$）
+
+**qk\_matmul（当前 Q 与历史 $S$ 个 K 做点积）：**
+
+$$OPs = S \cdot H_{head} \cdot N_h \cdot B \times 2 = 1152 \times 128 \times 64 \times 1 \times 2 \approx 19.1\ \text{MFLOPs}$$
+
+$$\text{内存访问} = \underbrace{1 \cdot H_{head} \cdot N_h \cdot B \cdot a_{byte}}_{\text{Q: 0.016 MB}} + \underbrace{S \cdot H_{head} \cdot N_{kv} \cdot B \cdot kv_{byte}}_{\text{K cache: 2.25 MB}} + \underbrace{1 \cdot S \cdot N_h \cdot B \cdot a_{byte}}_{\text{注意力分数: 0.14 MB}} \approx 2.41\ \text{MB}$$
+
+$$AI = \frac{19.1\ \text{M}}{2.41\ \text{M}} \approx 7.9\ \text{OPs/byte} \ll 322 \Rightarrow \text{内存瓶颈}$$
+
+$$t_{qk\_matmul} = \frac{19.1\ \text{M}}{7.9 \times 3.072\ \text{T}} \approx 0.79\ \mu s$$
+
+**sv\_matmul（注意力权重与历史 $S$ 个 V 加权求和）：**
+
+$$OPs = H_{head} \cdot S \cdot N_h \cdot B \times 2 = 128 \times 1152 \times 64 \times 1 \times 2 \approx 19.1\ \text{MFLOPs}$$
+
+$$\text{内存访问} = \underbrace{S \cdot N_h \cdot B \cdot a_{byte}}_{\text{注意力权重: 0.14 MB}} + \underbrace{S \cdot H_{head} \cdot N_{kv} \cdot B \cdot kv_{byte}}_{\text{V cache: 2.25 MB}} + \underbrace{H_{head} \cdot N_h \cdot B \cdot a_{byte}}_{\text{输出: 0.016 MB}} \approx 2.41\ \text{MB}$$
+
+$$t_{sv\_matmul} \approx 0.79\ \mu s$$
+
+#### 5.6.3 Decode 每层时间汇总
+
+| 算子 | OPs | AI | 瓶颈 | 时间 |
+|------|-----|----|------|------|
+| `attn_norm` | 4.61 KFLOPs | 0.26 | 内存 | 0.82 μs |
+| `q_proj` | 83.9 MFLOPs | 1.05 | 内存 | 26.0 μs |
+| `k_proj` | 10.5 MFLOPs | 1.05 | 内存 | 3.25 μs |
+| `v_proj` | 10.5 MFLOPs | 1.05 | 内存 | 3.25 μs |
+| `qk_matmul` | 19.1 MFLOPs | 7.9 | 内存 | 0.79 μs |
+| `softmax` | 0.59 MFLOPs | 1.31 | 内存 | 0.15 μs |
+| `sv_matmul` | 19.1 MFLOPs | 7.9 | 内存 | 0.79 μs |
+| `out_proj` | 83.9 MFLOPs | 1.05 | 内存 | 26.0 μs |
+| `attn_add` | 5.12 KFLOPs | 0.26 | 内存 | 0.82 μs |
+| `mlp_norm` | 4.61 KFLOPs | 0.26 | 内存 | 0.82 μs |
+| `gate_proj` | 262.1 MFLOPs | 1.05 | 内存 | 81.3 μs |
+| `up_proj` | 262.1 MFLOPs | 1.05 | 内存 | 81.3 μs |
+| `mlp_act` | 0.13 MFLOPs | 1.31 | 内存 | 0.032 μs |
+| `down_proj` | 262.1 MFLOPs | 1.05 | 内存 | 81.3 μs |
+| `mlp_add` | 5.12 KFLOPs | 0.26 | 内存 | 0.82 μs |
+| **每层合计** | **≈ 1013 MFLOPs** | | | **≈ 307.4 μs** |
+
+加上 lm\_head（decode 阶段只处理 1 个 token）：
+
+$$OPs_{lm\_head} = B \cdot H \cdot V \times 2 = 1 \times 5120 \times 151936 \times 2 \approx 1557\ \text{MFLOPs}$$
+
+$$\text{内存访问} \approx 5120 \times 151936 \times 2 = 1557\ \text{MB（权重主导）}$$
+
+$$AI \approx 1.0 \Rightarrow \text{内存瓶颈}, \quad t_{lm\_head} = \frac{1557\ \text{M}}{1.0 \times 3.072\ \text{T}} \approx 507\ \mu s$$
+
+**Decode 总推理时间（单步 TPOT）：**
+
+$$\boxed{t_{decode} = L \times t_{per\_layer} + t_{lm\_head} = 64 \times 307.4 + 507 \approx 20,181\ \mu s \approx 20.2\ \text{ms/token}}$$
+
+---
+
+### 5.7 三阶段时间汇总
+
+| 阶段 | 推理时间 | 说明 |
+|------|----------|------|
+| **Vision Stage**（TTFT 的视觉部分） | $\approx 2.72\ \text{ms}$ | Vision Encoder + Merger，处理 1024×1024 图像 |
+| **Prefill**（LLM 预填充） | $\approx 95.3\ \text{ms}$ | 处理 1152 个 token（128 文本 + 1024 视觉） |
+| **TTFT**（首 token 时延） | $\approx 2.72 + 95.3 \approx 98.0\ \text{ms}$ | Vision + Prefill 串行执行 |
+| **Decode**（每 token 生成，TPOT） | $\approx 20.2\ \text{ms/token}$ | 单步 decode，KV Cache 长度 1152 |
+
+**关键结论：**
+
+1. **Vision Stage 占 TTFT 约 2.8%**：视觉编码计算量虽大（约 1.36 TFLOPs），但 $N_m=1024$ 个 token 并行处理，算术强度高，多数算子达到计算瓶颈，效率较高。
+
+2. **Prefill 主导 TTFT**：LLM prefill 的 MLP 线性层（gate/up/down\_proj）计算量最大，每层约 906 GFLOPs，占每层总时间的 62%。
+
+3. **Decode 完全内存瓶颈**：所有线性层 $AI \approx 1.05$，远低于转折点 322，时间由权重加载量决定。增大 batchsize 可线性提升算术强度，改善 decode 效率。
+
+4. **注意力在 Decode 中占比小**：KV Cache 加载量（$S=1152$ 时约 2.25 MB/层）远小于权重加载量（约 500 MB/层），注意力不是 decode 瓶颈。随着生成 token 增多，$S$ 增大，KV Cache 加载量线性增长，最终可能成为瓶颈。
