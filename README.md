@@ -19,11 +19,31 @@ LLM-Viewer 用于可视化大模型/CNN 计算图，并基于 roofline 模型估
 在仓库根目录执行：
 
 ```bash
+docker compose build
 docker compose up --build
+```
+
+也可以分两步启动（推荐在首次构建后使用）：
+
+```bash
+docker compose up -d
 ```
 
 - 前端默认地址：`http://localhost:5173`
 - 后端默认地址：`http://localhost:5000`
+
+停止/清理容器常用命令：
+
+```bash
+# 仅停止容器（保留容器与网络）
+docker compose stop
+
+# 停止并移除容器与网络
+docker compose down
+
+# 停止并移除容器、网络、数据卷（谨慎使用）
+docker compose down -v
+```
 
 ## 本地开发
 
