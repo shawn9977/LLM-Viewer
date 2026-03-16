@@ -1,6 +1,6 @@
-# LLM-Viewer
+# Roofline-Viewer
 
-LLM-Viewer 用于可视化大模型/CNN 计算图，并基于 roofline 模型估算推理耗时与显存开销。项目提供：
+Roofline-Viewer 用于可视化大模型/CNN 计算图，并基于 roofline 模型估算推理耗时与显存开销。项目提供：
 - Web 界面（交互式查看节点与配置）
 - CLI 分析工具（批量或脚本化分析）
 
@@ -30,6 +30,8 @@ docker compose up -d
 ```
 
 - 前端默认地址：`http://localhost:5173`
+- 前端 LLM 页面：`http://localhost:5173`
+- 前端 CNN 页面：`http://localhost:5173/cnn.html`
 - 后端默认地址：`http://localhost:5000`
 
 停止/清理容器常用命令：
@@ -55,16 +57,30 @@ pip install -r requirements.txt
 python app.py --local --port 5000
 ```
 
-### 2) 启动前端
+### 2) 启动前端（LLM / VL）
 
 ```bash
 cd frontend
 npm install
 VITE_IP_PORT=127.0.0.1:5000 \
-VITE_MODEL_ID=Qwen/Qwen3-4B-Instruct-2507 \
+VITE_MODEL_ID=Qwen/Qwen3-VL-8B-Instruct \
 VITE_HARDWARE=intel_ARC_B60 \
 npm run dev
 ```
+
+启动后访问：`http://localhost:5173`
+
+### 3) 前端查看 CNN 模型
+
+```bash
+cd frontend
+npm install
+VITE_IP_PORT=127.0.0.1:5000 \
+VITE_HARDWARE=intel_ARC_B60 \
+npm run dev
+```
+
+启动后访问：`http://localhost:5173/cnn.html`
 
 ## CLI 用法
 
