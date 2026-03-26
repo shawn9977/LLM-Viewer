@@ -16,6 +16,7 @@ available_model_ids_sources = {
     "LLM-Research/llama-2-7b": {"source": "modelscope"},
     "LLM-Research/llama-2-13b": {"source": "modelscope"},
     "zai-org/chatglm3-6b": {"source": "huggingface"},
+    "PaddlePaddle/PaddleOCR-VL-1.5": {"source": "local"},
 }
 
 def get_available_models():

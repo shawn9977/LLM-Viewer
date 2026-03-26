@@ -16,8 +16,8 @@
     </div>
     <div class="config_div" v-if="inference_stage!='chat'">
         SeqLength:
-        <input type="range" min="1" max="4096" value="1024" v-model.lazy="seq_length">
-        <input type="number" v-model.lazy="seq_length" min="1" max="4096">
+        <input type="range" min="0" max="4096" value="1024" v-model.lazy="seq_length">
+        <input type="number" v-model.lazy="seq_length" min="0" max="4096">
     </div>
     <div class="config_div" v-else>
         PromptLength:
@@ -121,7 +121,7 @@ const model_id = inject('model_id');
 
 const is_multimodal = computed(() => {
     const id = model_id?.value || '';
-    return id.includes('Qwen3-VL') || id.includes('Omni');
+    return id.includes('Qwen3-VL') || id.includes('Omni') || id.includes('PaddleOCR-VL');
 });
 
 const is_omni = computed(() => {
