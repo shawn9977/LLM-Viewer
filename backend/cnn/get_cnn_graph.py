@@ -6,10 +6,14 @@ CNN 专用图生成，对应 LLM 侧的 get_model_graph.py。
 
 import sys
 import os
-sys.path.insert(0, os.path.dirname(__file__))
 
-import cnn_models  # 触发所有子类的 @register_cnn_model 注册
-from cnn_analyzer import get_cnn_analyzer
+# 添加父目录到路径，以便导入 hardwares, utils
+_parent_dir = os.path.dirname(os.path.dirname(__file__))
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
+
+from . import cnn_models  # 触发所有子类的 @register_cnn_model 注册
+from .cnn_analyzer import get_cnn_analyzer
 from hardwares import get_hardware_info
 from utils import str_number
 

@@ -6,9 +6,9 @@ MobileNetV2 roofline 分析子类。
 
 import json
 from pathlib import Path
-from cnn_analyzer import CNNAnalyzer, register_cnn_model
+from ..cnn_analyzer import CNNAnalyzer, register_cnn_model
 
-# JSON 文件路径（相对于项目根目录）
+# JSON 文件路径（相对于 cnn 目录）
 _JSON_PATH = Path(__file__).parent.parent / "cnn_config" / "mobilenet-v2.json"
 
 # 量化辅助层后缀，不计入分析

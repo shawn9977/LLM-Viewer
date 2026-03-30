@@ -10,7 +10,11 @@ CNN roofline 分析框架：基类 + 子类注册表。
 
 import sys
 import os
-sys.path.insert(0, os.path.dirname(__file__))
+
+# 添加父目录到路径，以便导入 hardwares, roofline_model
+_parent_dir = os.path.dirname(os.path.dirname(__file__))
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
 
 from hardwares import get_hardware_info
 from roofline_model import roofline_analyze

@@ -16,7 +16,7 @@ YOLOv8n 网络结构（简化）：
 
 import json
 from pathlib import Path
-from cnn_analyzer import CNNAnalyzer, register_cnn_model
+from ..cnn_analyzer import CNNAnalyzer, register_cnn_model
 
 _JSON_PATH = Path(__file__).parent.parent / "cnn_config" / "yolo_v8n.json"
 

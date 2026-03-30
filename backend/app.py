@@ -3,8 +3,8 @@ from flask_cors import CORS
 from get_model_graph import get_model_graph
 from model_params import get_available_models
 from hardwares import get_available_hardwares
-from get_cnn_graph import get_cnn_graph
-from cnn_analyzer import get_available_cnn_models
+from cnn.get_cnn_graph import get_cnn_graph
+from cnn.cnn_analyzer import get_available_cnn_models
 import argparse
 import logging
 
