@@ -41,6 +41,10 @@ hardware_params = {
     "intel_Ultra_225H iGPU": {"bandwidth": 6.4e9 * 8 * 2, "FP16": 31.5e12, "INT8": 63e12, "onchip_buffer": 24e6},
     "intel_Ultra_255H iGPU": {"bandwidth": 6.4e9 * 8 * 2, "FP16": 37e12, "INT8": 74e12, "onchip_buffer": 24e6},
     "intel_ARC_B390 (PTL iGPU)": {"bandwidth": 9.6e9 * 8 * 2, "FP16": 61e12, "INT8": 122e12, "onchip_buffer": 32e6},
+    # Intel WildCatLake (Q9XY): 2Xe (32 EU) + 1 NPU, DDR5-6400 single channel
+    # Bandwidth: 6400 MT/s × 64 bits × 1 channel ÷ 8 = 51.2 GB/s
+    "intel_WildCatLake iGPU": {"bandwidth": 51.2e9, "FP16": 9e12, "INT8": 18e12, "onchip_buffer": 8e6},
+    "intel_WildCatLake NPU": {"bandwidth": 51.2e9, "FP16": 9e12, "INT8": 18e12, "onchip_buffer": 4e6},
 }
 
 
